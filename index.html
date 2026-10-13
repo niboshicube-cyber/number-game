@@ -35,7 +35,6 @@ button{font:inherit;cursor:pointer}
 .penalty{position:absolute;z-index:2;left:50%;top:50%;transform:translate(-50%,-50%);font-size:19px;font-weight:900;color:#ff5364;text-shadow:0 1px 5px #101522;white-space:nowrap;pointer-events:none;animation:floatUp .85s ease-out forwards}
 @keyframes floatUp{0%{opacity:0;translate:0 8px}20%{opacity:1}100%{opacity:0;translate:0 -35px}}
 @keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-3px)}75%{transform:translateX(3px)}}
-
 .score-display{border:1px solid #46516b;border-radius:14px;background:#181e2c;padding:15px 10px 17px;margin:18px 0}
 .score-caption{color:#aeb8ce;font-size:13px;letter-spacing:2px}
 .score-value-row{display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap;margin-top:6px}
@@ -53,6 +52,7 @@ button{font:inherit;cursor:pointer}
 #result h2{font-size:24px}
 #resultScore{font-size:clamp(23px,6vw,32px);font-weight:850;overflow-wrap:anywhere;margin:25px 0}
 .result-note{color:#aab4ca;font-size:13px;line-height:1.8}
+.version-label{display:inline-block;color:#f6d365;font-size:12px;margin:4px 0 0}
 @media(max-width:360px){.container{width:94%}#numbers{gap:7px}.num{font-size:21px}.instruction{font-size:15px}.score-value-row{gap:7px}}
 </style>
 </head>
@@ -81,6 +81,26 @@ button{font:inherit;cursor:pointer}
       問題をクリアするたびに制限時間が短くなる。<br>
       誤答すると残り時間が1.5秒減る。
     </div>
+    <button class="secondary" onclick="showVersions()">いままでのバージョン</button>
+  </section>
+
+  <section id="versions" class="hidden">
+    <p class="info">遊びたいルールを選択してください。</p>
+    <div class="panel">
+      <button class="mode-button" style="width:100%" onclick="selectVersion('v1')">
+        Ver.1　初期ルール
+        <small>素数・偶数・奇数・倍数・約数・しきい値</small>
+      </button>
+      <button class="mode-button" style="width:100%;margin-top:10px" onclick="selectVersion('v2')">
+        Ver.2　発展ルール
+        <small>条件の組み合わせ・否定条件</small>
+      </button>
+      <button class="mode-button" style="width:100%;margin-top:10px" onclick="selectVersion('latest')">
+        最新版
+        <small>現在のルール・得点調整・約数条件</small>
+      </button>
+    </div>
+    <button class="secondary" onclick="backToMenu()">メニューに戻る</button>
   </section>
 
   <section id="game" class="hidden">
@@ -89,7 +109,7 @@ button{font:inherit;cursor:pointer}
       <span>挑戦 <strong id="round">1</strong> 問目</span>
       <span>残り時間 <strong id="timer">5</strong></span>
     </div>
-
+    <div class="version-label" id="versionLabel"></div>
     <div class="score-display">
       <div class="score-caption">TOTAL SCORE</div>
       <div class="score-value-row">
@@ -98,7 +118,6 @@ button{font:inherit;cursor:pointer}
         <span id="scoreGain" aria-live="polite"></span>
       </div>
     </div>
-
     <div class="progress"><div id="timebar"></div></div>
     <div id="instruction" class="instruction"></div>
     <div id="numbers"></div>
@@ -117,6 +136,7 @@ button{font:inherit;cursor:pointer}
 
 <script>
 let mode="normal";
+let version="latest";
 let q=null;
 let score=0;
 let questionLimit=5;
@@ -132,6 +152,12 @@ let currentCorrect=new Set();
 let selectedCorrect=new Set();
 let currentQuestionPoints=0;
 
+const VERSION_NAMES={
+  v1:"Ver.1 初期ルール",
+  v2:"Ver.2 発展ルール",
+  latest:"最新版"
+};
+
 function vibrate(pattern){
   try{
     if("vibrate" in navigator)navigator.vibrate(pattern);
@@ -139,21 +165,13 @@ function vibrate(pattern){
 }
 
 function clearTimers(){
-  if(countId!==null){
-    clearInterval(countId);
-    countId=null;
-  }
-  if(nextId!==null){
-    clearTimeout(nextId);
-    nextId=null;
-  }
+  if(countId!==null){clearInterval(countId);countId=null;}
+  if(nextId!==null){clearTimeout(nextId);nextId=null;}
 }
 
 function isPrime(n){
   if(n<2)return false;
-  for(let i=2;i*i<=n;i++){
-    if(n%i===0)return false;
-  }
+  for(let i=2;i*i<=n;i++)if(n%i===0)return false;
   return true;
 }
 
@@ -161,10 +179,28 @@ function randomItem(arr){
   return arr[Math.floor(Math.random()*arr.length)];
 }
 
-/* 条件を作成。約数は1〜200で、1〜10の約数が3個以上の数に限定 */
+function showVersions(){
+  active=false;
+  clearTimers();
+  document.getElementById("menu").classList.add("hidden");
+  document.getElementById("game").classList.add("hidden");
+  document.getElementById("result").classList.add("hidden");
+  document.getElementById("versions").classList.remove("hidden");
+}
+
+function selectVersion(v){
+  version=v;
+  document.getElementById("versions").classList.add("hidden");
+  document.getElementById("menu").classList.remove("hidden");
+}
+
 function makePredicates(){
   const predicates=[];
+  const add=(type,value,label,difficulty,test)=>predicates.push({
+    type,value,label,difficulty,test
+  });
 
+  // どの版にも共通する基本条件
   for(const item of [
     {label:"3以下",value:3,type:"le"},
     {label:"5以下",value:5,type:"le"},
@@ -173,84 +209,89 @@ function makePredicates(){
     {label:"6以上",value:6,type:"ge"},
     {label:"8以上",value:8,type:"ge"}
   ]){
-    predicates.push({
-      type:item.type,
-      value:item.value,
-      label:item.label,
-      difficulty:500+item.value*10,
-      test:item.type==="le"
-        ?n=>n<=item.value
-        :n=>n>=item.value
-    });
+    add(item.type,item.value,item.label,500+item.value*10,
+      item.type==="le"?n=>n<=item.value:n=>n>=item.value);
   }
 
-  /* 小さい数の倍数ほど高得点。1の倍数も含める */
-  for(let k=1;k<=10;k++){
-    predicates.push({
-      type:"multiple",
-      value:k,
-      label:`${k}の倍数`,
-      difficulty:800+(11-k)*50,
-      test:n=>n%k===0
-    });
+  // 初期版では偶数・奇数も独立した条件
+  if(version==="v1"){
+    add("even",null,"偶数",600,n=>n%2===0);
+    add("odd",null,"奇数",600,n=>n%2===1);
   }
 
-  predicates.push({
-    type:"square",
-    label:"平方数",
-    difficulty:1500,
-    test:n=>Number.isInteger(Math.sqrt(n))
-  });
+  // 倍数条件
+  const maxMultiple=version==="v1"?5:10;
+  for(let k=1;k<=maxMultiple;k++){
+    const difficulty=version==="v1"
+      ?700+(6-k)*50
+      :800+(11-k)*50;
+    add("multiple",k,`${k}の倍数`,difficulty,n=>n%k===0);
+  }
 
-  predicates.push({
-    type:"prime",
-    label:"素数",
-    difficulty:2000,
-    test:n=>isPrime(n)
-  });
+  add("square",null,"平方数",
+    version==="v1"?1000:1500,
+    n=>Number.isInteger(Math.sqrt(n)));
 
-  for(let N=1;N<=200;N++){
+  add("prime",null,"素数",
+    version==="v1"?1200:2000,
+    n=>isPrime(n));
+
+  // 初期版・発展版では1〜10の約数条件を扱う
+  const maxN=version==="v1"?30:200;
+  for(let N=1;N<=maxN;N++){
     const divisors=[];
+    for(let n=1;n<=10;n++)if(N%n===0)divisors.push(n);
 
-    for(let n=1;n<=10;n++){
-      if(N%n===0)divisors.push(n);
-    }
+    if(version!=="v1"&&divisors.length<3)continue;
+    if(version==="v1"&&divisors.length<2)continue;
 
-    if(divisors.length<3)continue;
+    const difficulty=version==="v1"
+      ?1300+N*5
+      :2500+N*5+(divisors.length-3)*500;
 
-    const difficulty=2500+N*5+(divisors.length-3)*500;
-
-    predicates.push({
-      type:"divisor",
-      value:N,
-      label:`${N}の約数`,
-      difficulty:difficulty,
-      test:n=>N%n===0
-    });
+    add("divisor",N,`${N}の約数`,difficulty,n=>N%n===0);
   }
 
   return predicates;
 }
 
-/*
- * 約数条件の候補率：
- * 1問目0%、2問目1%、3問目2%……
- * 10問目9%、11問目以降10%。
- */
+function getCorrect(test){
+  const result=[];
+  for(let n=1;n<=10;n++)if(test(n))result.push(n);
+  return result;
+}
+
+function makeNormalQuestion(){
+  const predicates=makePredicates();
+  let p,correct;
+  do{
+    p=randomItem(predicates);
+    correct=getCorrect(p.test);
+  }while(correct.length===0||correct.length===10);
+
+  return {
+    label:p.label,
+    correct,
+    predicate:p,
+    test:p.test
+  };
+}
+
 function makeAdvancedQuestion(){
-  const allPredicates=makePredicates();
+  const all=makePredicates();
+  let predicates=all;
 
-  const divisorPredicates=
-    allPredicates.filter(p=>p.type==="divisor");
-  const otherPredicates=
-    allPredicates.filter(p=>p.type!=="divisor");
-
-  const divisorChance=Math.min(0.1,0.01*(round-1));
-
-  const predicates=[
-    ...otherPredicates,
-    ...divisorPredicates.filter(()=>Math.random()<divisorChance)
-  ];
+  // 最新版では、約数条件を問題候補に含める確率を少しずつ上げる
+  if(version==="latest"){
+    const others=all.filter(p=>p.type!=="divisor");
+    const divisors=all.filter(p=>p.type==="divisor");
+    const questionNumber=round+1;
+    const divisorChance=Math.min(0.1,0.01*(questionNumber-1));
+    predicates=[
+      ...others,
+      ...divisors.filter(()=>Math.random()<divisorChance)
+    ];
+  }
 
   const firstIndex=Math.floor(Math.random()*predicates.length);
   const first=predicates[firstIndex];
@@ -258,71 +299,36 @@ function makeAdvancedQuestion(){
   const second=randomItem(remaining);
 
   const connector=Math.random()<0.5?"and":"or";
-  const negateFirst=Math.random()<0.25;
-  const negateSecond=Math.random()<0.25;
+  const negateFirst=version==="v1"?false:Math.random()<0.25;
+  const negateSecond=version==="v1"?false:Math.random()<0.25;
 
   const testFirst=n=>negateFirst?!first.test(n):first.test(n);
   const testSecond=n=>negateSecond?!second.test(n):second.test(n);
+  const connectorLabel=connector==="and"?"かつ":"または";
 
   let labelFirst=first.label;
   let labelSecond=second.label;
-
   if(negateFirst)labelFirst+="ではない";
   if(negateSecond)labelSecond+="ではない";
 
-  const connectorLabel=connector==="and"?"かつ":"または";
-  const correct=[];
-
-  for(let n=1;n<=10;n++){
-    const a=testFirst(n);
-    const b=testSecond(n);
-    const ok=connector==="and"?(a&&b):(a||b);
-    if(ok)correct.push(n);
-  }
+  const test=n=>{
+    const a=testFirst(n),b=testSecond(n);
+    return connector==="and"?(a&&b):(a||b);
+  };
 
   return {
     label:`${labelFirst}<span class="logic">${connectorLabel}</span>${labelSecond}`,
-    correct:correct,
-    first:first,
-    second:second,
-    connector:connector,
+    correct:getCorrect(test),
+    first,second,connector,
     negationCount:Number(negateFirst)+Number(negateSecond),
-    test:n=>{
-      const a=testFirst(n);
-      const b=testSecond(n);
-      return connector==="and"?(a&&b):(a||b);
-    }
-  };
-}
-
-function makeNormalQuestion(){
-  const predicates=makePredicates();
-  let p;
-  let correct=[];
-
-  do{
-    p=randomItem(predicates);
-    correct=[];
-
-    for(let n=1;n<=10;n++){
-      if(p.test(n))correct.push(n);
-    }
-  }while(correct.length===0||correct.length===10);
-
-  return {
-    label:p.label,
-    correct:correct,
-    predicate:p,
-    test:p.test
+    test
   };
 }
 
 function makeQuestion(){
   if(mode==="normal")return makeNormalQuestion();
 
-  let question;
-  let attempts=0;
-
+  let question,attempts=0;
   do{
     question=makeAdvancedQuestion();
     attempts++;
@@ -330,41 +336,29 @@ function makeQuestion(){
     (question.correct.length===0||question.correct.length===10)
     &&attempts<100
   );
-
   return question;
 }
 
 function calculateQuestionPoints(question){
-  if(mode!=="advanced"){
-    return question.predicate.difficulty;
-  }
+  if(mode!=="advanced")return question.predicate.difficulty;
 
   let points=question.first.difficulty+question.second.difficulty;
 
-  if(question.connector==="and")points+=500;
-  points+=question.negationCount*500;
+  if(question.connector==="and")points+=version==="v1"?0:500;
+  points+=question.negationCount*(version==="v1"?0:500);
 
   return points;
 }
 
-/* 得点の横に加算ポイントを表示。高得点ほど大きく金色に */
 function showScoreGain(points){
   const gain=document.getElementById("scoreGain");
-
-  if(gainId!==null){
-    clearTimeout(gainId);
-    gainId=null;
-  }
+  if(gainId!==null){clearTimeout(gainId);gainId=null;}
 
   gain.classList.remove("show","big");
   void gain.offsetWidth;
-
   gain.textContent=`+${points.toLocaleString("ja-JP")}`;
 
-  if(points>=4000){
-    gain.classList.add("big");
-  }
-
+  if(points>=4000)gain.classList.add("big");
   gain.classList.add("show");
 
   gainId=setTimeout(()=>{
@@ -376,11 +370,7 @@ function showScoreGain(points){
 
 function startGame(selectedMode){
   clearTimers();
-
-  if(gainId!==null){
-    clearTimeout(gainId);
-    gainId=null;
-  }
+  if(gainId!==null){clearTimeout(gainId);gainId=null;}
 
   const gain=document.getElementById("scoreGain");
   gain.classList.remove("show","big");
@@ -391,13 +381,26 @@ function startGame(selectedMode){
   round=0;
   active=true;
   questionLocked=false;
-  questionLimit=mode==="advanced"?10:5;
+
+  if(version==="v1"){
+    questionLimit=mode==="advanced"?10:5;
+    wrongPenalty=0;
+  }else if(version==="v2"){
+    questionLimit=mode==="advanced"?10:5;
+    wrongPenalty=0;
+  }else{
+    questionLimit=mode==="advanced"?10:5;
+    wrongPenalty=1.5;
+  }
 
   document.getElementById("menu").classList.add("hidden");
+  document.getElementById("versions").classList.add("hidden");
   document.getElementById("result").classList.add("hidden");
   document.getElementById("game").classList.remove("hidden");
+
   document.getElementById("modeLabel").textContent=
     mode==="advanced"?"上級":"初級";
+  document.getElementById("versionLabel").textContent=VERSION_NAMES[version];
   document.getElementById("score").textContent="0";
 
   nextQuestion();
@@ -405,11 +408,10 @@ function startGame(selectedMode){
 
 function nextQuestion(){
   if(!active)return;
-
   clearTimers();
+
   questionLocked=false;
   selectedCorrect=new Set();
-
   q=makeQuestion();
   currentCorrect=new Set(q.correct);
   currentQuestionPoints=calculateQuestionPoints(q);
@@ -417,8 +419,7 @@ function nextQuestion(){
   round++;
   document.getElementById("round").textContent=round;
   document.getElementById("instruction").innerHTML=q.label;
-  document.getElementById("message").textContent=
-    "当てはまる数字をすべて選ぼう！";
+  document.getElementById("message").textContent="当てはまる数字をすべて選ぼう！";
 
   const board=document.getElementById("numbers");
   board.innerHTML="";
@@ -426,13 +427,11 @@ function nextQuestion(){
   for(let n=1;n<=10;n++){
     const cell=document.createElement("div");
     cell.className="cell";
-
     const b=document.createElement("button");
     b.className="num";
     b.textContent=n;
     b.setAttribute("aria-label",`数字${n}`);
     b.addEventListener("click",()=>tap(b,cell,n));
-
     cell.appendChild(b);
     board.appendChild(cell);
   }
@@ -444,12 +443,10 @@ function nextQuestion(){
 
 function updateTimer(){
   if(!active||questionLocked)return;
-
   const remaining=(deadline-Date.now())/1000;
 
   document.getElementById("timer").textContent=
     Math.max(0,Math.ceil(remaining));
-
   document.getElementById("timebar").style.width=
     Math.max(0,Math.min(100,remaining/questionLimit*100))+"%";
 
@@ -458,7 +455,6 @@ function updateTimer(){
 
 function tap(button,cell,n){
   if(!active||questionLocked||button.disabled)return;
-
   button.disabled=true;
 
   if(q.test(n)){
@@ -474,14 +470,16 @@ function tap(button,cell,n){
       score+=currentQuestionPoints;
       document.getElementById("score").textContent=
         score.toLocaleString("ja-JP");
-
       showScoreGain(currentQuestionPoints);
       vibrate([25,40,45]);
 
       document.getElementById("message").textContent=
         `完全正解！ +${currentQuestionPoints.toLocaleString("ja-JP")}点`;
 
-      questionLimit=Math.max(0.25,questionLimit-0.25);
+      // Ver.1・Ver.2は初期時間を保ち、最新版のみ短縮する
+      if(version==="latest"){
+        questionLimit=Math.max(0.25,questionLimit-0.25);
+      }
 
       nextId=setTimeout(()=>{
         if(active)nextQuestion();
@@ -489,26 +487,26 @@ function tap(button,cell,n){
     }
   }else{
     button.classList.add("wrong");
-    deadline-=wrongPenalty*1000;
 
-    const penalty=document.createElement("span");
-    penalty.className="penalty";
-    penalty.textContent="−1.5s";
-    cell.appendChild(penalty);
-
-    setTimeout(()=>{
-      if(penalty.parentNode)penalty.remove();
-    },900);
-
-    document.getElementById("message").textContent="誤答！ −1.5秒";
-    vibrate([70,35,70]);
-    updateTimer();
+    if(wrongPenalty>0){
+      deadline-=wrongPenalty*1000;
+      const penalty=document.createElement("span");
+      penalty.className="penalty";
+      penalty.textContent="−1.5s";
+      cell.appendChild(penalty);
+      setTimeout(()=>{if(penalty.parentNode)penalty.remove();},900);
+      document.getElementById("message").textContent="誤答！ −1.5秒";
+      vibrate([70,35,70]);
+      updateTimer();
+    }else{
+      document.getElementById("message").textContent="誤答！";
+      vibrate(70);
+    }
   }
 }
 
 function endGame(){
   if(!active)return;
-
   active=false;
   questionLocked=true;
   clearTimers();
@@ -523,12 +521,10 @@ function endGame(){
   document.getElementById("result").classList.remove("hidden");
 
   document.getElementById("resultScore").textContent=
-    `獲得得点：${score.toLocaleString("ja-JP")}点 / 挑戦した問題数：${round}問`;
+    `獲得得点：${score.toLocaleString("ja-JP")}点`;
 
   document.getElementById("resultNote").textContent=
-    mode==="advanced"
-      ?"上級に挑戦お疲れさま！ 難しい条件の組み合わせを見抜こう。"
-      :"挑戦お疲れさま！ 次はさらに記録を伸ばそう。";
+    `${VERSION_NAMES[version]}・${mode==="advanced"?"上級":"初級"}に挑戦お疲れさま！ 挑戦した問題数：${round}問`;
 
   vibrate([80,50,120]);
 }
@@ -538,11 +534,7 @@ function backToMenu(){
   questionLocked=true;
   clearTimers();
 
-  if(gainId!==null){
-    clearTimeout(gainId);
-    gainId=null;
-  }
-
+  if(gainId!==null){clearTimeout(gainId);gainId=null;}
   const gain=document.getElementById("scoreGain");
   gain.classList.remove("show","big");
   gain.textContent="";
@@ -553,6 +545,7 @@ function backToMenu(){
 
   document.getElementById("game").classList.add("hidden");
   document.getElementById("result").classList.add("hidden");
+  document.getElementById("versions").classList.add("hidden");
   document.getElementById("menu").classList.remove("hidden");
 }
 </script>
