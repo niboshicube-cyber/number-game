@@ -224,7 +224,7 @@ button{font:inherit;cursor:pointer}
   line-height:1.8;
 }
 
-/* 高得点獲得時の演出 */
+/* 控えめな高得点演出 */
 #jackpot{
   position:fixed;
   inset:0;
@@ -233,40 +233,36 @@ button{font:inherit;cursor:pointer}
   align-items:center;
   justify-content:center;
   flex-direction:column;
-  background:rgba(255,220,35,0.94);
-  color:#25200a;
+  background:rgba(255,225,70,0.28);
+  color:#fff5b0;
+  text-shadow:0 2px 12px rgba(0,0,0,.65);
   pointer-events:none;
   opacity:0;
   visibility:hidden;
 }
 #jackpot.show{
   visibility:visible;
-  animation:jackpotFlash 1.15s ease-out forwards;
+  animation:jackpotFlash .75s ease-out forwards;
 }
 #jackpotLabel{
-  font-size:clamp(25px,7vw,42px);
-  font-weight:1000;
-  letter-spacing:3px;
-  text-shadow:0 2px 0 rgba(255,255,255,.4);
+  font-size:clamp(22px,6vw,32px);
+  font-weight:900;
+  letter-spacing:2px;
 }
 #jackpotPoints{
-  font-size:clamp(48px,15vw,84px);
-  font-weight:1000;
+  font-size:clamp(38px,11vw,58px);
+  font-weight:900;
   line-height:1.2;
-  margin-top:10px;
-  text-shadow:0 4px 0 rgba(180,120,0,.22);
+  margin-top:6px;
 }
 #jackpotMessage{
-  font-size:16px;
-  font-weight:800;
-  margin-top:10px;
+  font-size:13px;
+  font-weight:700;
+  margin-top:6px;
 }
 @keyframes jackpotFlash{
-  0%{opacity:0;transform:scale(1.12)}
-  12%{opacity:1;transform:scale(1)}
-  22%{opacity:.88}
-  35%{opacity:1}
-  55%{opacity:.95}
+  0%{opacity:0;transform:scale(1.03)}
+  20%{opacity:1;transform:scale(1)}
   100%{opacity:0;transform:scale(1)}
 }
 
@@ -342,8 +338,8 @@ button{font:inherit;cursor:pointer}
 </div>
 
 <div id="jackpot" aria-hidden="true">
-  <div id="jackpotLabel">JACKPOT!!</div>
-  <div id="jackpotPoints">+35</div>
+  <div id="jackpotLabel">HIGH SCORE!</div>
+  <div id="jackpotPoints">+3,500</div>
   <div id="jackpotMessage">PERFECT LOGIC!</div>
 </div>
 
@@ -503,10 +499,7 @@ function makeAdvancedQuestion(){
   const testFirst=n=>negateFirst?!first.test(n):first.test(n);
   const testSecond=n=>negateSecond?!second.test(n):second.test(n);
 
-  /*
-    否定前の条件名を使うので、
-    「素数ではないではない」のような重複は発生しない。
-  */
+  /* 否定前の条件名を使い、否定表現の重複を防ぐ */
   let labelFirst=first.label;
   let labelSecond=second.label;
 
@@ -572,23 +565,19 @@ function makeQuestion(){
   return question;
 }
 
-/*
-  問題全体の難易度で得点を決定。
-  「または」5点、「かつ」20点。
-  「ではない」1つにつき15点追加。
-*/
+/* 問題全体の難易度で得点を決定 */
 function calculateQuestionPoints(question){
   if(mode!=="advanced"){
-    return 5;
+    return 500;
   }
 
-  const basePoints=question.connector==="and"?20:5;
-  return basePoints+question.negationCount*15;
+  const basePoints=question.connector==="and"?2000:500;
+  return basePoints+question.negationCount*1500;
 }
 
-/* 高得点のとき、画面全体を黄色く光らせる */
+/* 3,500点以上のとき、控えめな高得点演出 */
 function showJackpot(points){
-  if(points<35) return;
+  if(points<3500) return;
 
   const overlay=document.getElementById("jackpot");
   const pointsLabel=document.getElementById("jackpotPoints");
@@ -599,19 +588,17 @@ function showJackpot(points){
   }
 
   overlay.classList.remove("show");
-
-  /* 同じ演出を連続して再生できるようにする */
   void overlay.offsetWidth;
 
-  pointsLabel.textContent=`+${points}`;
+  pointsLabel.textContent=`+${points.toLocaleString("ja-JP")}`;
   overlay.classList.add("show");
 
-  vibrate([40,30,60,30,100]);
+  vibrate([25,30,45]);
 
   jackpotId=setTimeout(()=>{
     overlay.classList.remove("show");
     jackpotId=null;
-  },1200);
+  },800);
 }
 
 function startGame(selectedMode){
@@ -724,22 +711,16 @@ function tap(button,cell,n){
       clearTimers();
 
       score+=currentQuestionPoints;
-      document.getElementById("score").textContent=score;
+      document.getElementById("score").textContent=
+        score.toLocaleString("ja-JP");
 
       vibrate([25,40,45]);
-
-      /* 35点以上なら高得点演出 */
       showJackpot(currentQuestionPoints);
 
       questionLimit=Math.max(0.25,questionLimit-0.25);
 
-      if(currentQuestionPoints>=35){
-        document.getElementById("message").textContent=
-          `完全正解！ +${currentQuestionPoints}点！！`;
-      }else{
-        document.getElementById("message").textContent=
-          `完全正解！ +${currentQuestionPoints}点`;
-      }
+      document.getElementById("message").textContent=
+        `完全正解！ +${currentQuestionPoints.toLocaleString("ja-JP")}点`;
 
       nextId=setTimeout(()=>{
         if(active) nextQuestion();
@@ -782,7 +763,7 @@ function endGame(){
   document.getElementById("result").classList.remove("hidden");
 
   document.getElementById("resultScore").textContent=
-    `獲得得点：${score}点 / 挑戦した問題数：${round}問`;
+    `獲得得点：${score.toLocaleString("ja-JP")}点 / 挑戦した問題数：${round}問`;
 
   document.getElementById("resultNote").textContent=
     mode==="advanced"
