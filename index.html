@@ -27,12 +27,17 @@ button{font:inherit;cursor:pointer;touch-action:manipulation}
 #prompt{font-size:20px;font-weight:bold;line-height:1.7}
 .logic{display:inline-block;padding:1px 6px;border:1px solid #ffc66d;border-radius:5px;background:#49391f;color:#ffdb99}
 #numbers{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;margin:16px 0}
-.num{aspect-ratio:1;border:1px solid #465573;border-radius:12px;background:#202a40;color:white;font-size:27px;font-weight:bold}
+.cell{position:relative;min-width:0}
+.num{width:100%;aspect-ratio:1;border:1px solid #465573;border-radius:12px;background:#202a40;color:white;font-size:27px;font-weight:bold}
 .num.correct{background:#17684d;border-color:#58e0a5}
-.num.wrong{background:#792f3b;border-color:#ff7787}
+.num.wrong{background:#792f3b;border-color:#ff7787;animation:shake .2s ease}
+.num:disabled{cursor:default}
+.penalty{position:absolute;z-index:2;left:50%;top:50%;transform:translate(-50%,-50%);font-size:19px;font-weight:900;color:#ff5364;text-shadow:0 1px 5px #101522;white-space:nowrap;pointer-events:none;animation:floatUp .85s ease-out forwards}
+@keyframes floatUp{0%{opacity:0;translate:0 8px}20%{opacity:1}100%{opacity:0;translate:0 -35px}}
+@keyframes shake{25%{transform:translateX(-3px)}75%{transform:translateX(3px)}}
 #message{min-height:27px;margin:12px 0;font-weight:bold}
 .note{font-size:12px;line-height:1.7;margin-top:14px}
-button:disabled{cursor:default;opacity:.8}
+button:disabled{cursor:default}
 </style>
 </head>
 <body>
@@ -43,16 +48,14 @@ button:disabled{cursor:default;opacity:.8}
 <section id="menu" class="wrap">
   <div class="modes">
     <button class="mode selected" id="normalBtn" onclick="setMode('normal')">
-      <strong>初級</strong>
-      <small>素数・偶数・倍数など</small>
+      <strong>初級</strong><small>素数・偶数・倍数など</small>
     </button>
     <button class="mode" id="advancedBtn" onclick="setMode('advanced')">
-      <strong>上級</strong>
-      <small>かつ・または・ではない</small>
+      <strong>上級</strong><small>かつ・または・ではない</small>
     </button>
   </div>
   <button class="primary" onclick="startGame()">ゲームスタート</button>
-  <div class="note">正解して次の問題に進むたびに、制限時間が0.25秒ずつ短くなるよ。</div>
+  <div class="note">正解して次の問題に進むたび、制限時間が0.25秒ずつ短くなるよ。誤答は1.5秒のペナルティ！</div>
 </section>
 
 <section id="game" class="wrap">
@@ -111,14 +114,14 @@ let mode="normal";
 let pool=[];
 let q=null;
 let score=0;
-let time=5;
 let questionLimit=5;
 let round=0;
 let active=false;
 let countId=null;
 let nextId=null;
-let startTime=0;
-let questionScore=0;
+let deadline=0;
+let wrongPenalty=1.5;
+let questionLocked=false;
 
 function prime(n){
   if(n<2)return false;
@@ -142,6 +145,13 @@ function clearTimers(){
   nextId=null;
 }
 
+// 対応ブラウザでは振動。未対応なら何もしない
+function vibrate(pattern){
+  try{
+    if("vibrate" in navigator)navigator.vibrate(pattern);
+  }catch(e){}
+}
+
 function setMode(m){
   if(active)return;
   mode=m;
@@ -152,15 +162,13 @@ function setMode(m){
 function makePool(){
   const base=[...(mode==="normal"?normalQuestions:advancedQuestions)];
 
-  // 約数の指示を追加。対象の数字は1〜200。
-  // 1〜10のマスに正解が必ず存在する問題だけを使う。
+  // 1〜200の数字の約数を問う問題を追加
   for(let i=0;i<10;i++){
     const target=Math.floor(Math.random()*200)+1;
     const matches=[];
     for(let n=1;n<=10;n++){
       if(target%n===0)matches.push(n);
     }
-
     if(matches.length>0&&matches.length<10){
       base.push({
         text:`${target}の約数`,
@@ -178,10 +186,10 @@ function startGame(){
   score=0;
   round=0;
   active=true;
+  questionLocked=false;
 
-  // 初級は5秒、上級は10秒からスタート
+  // 初級5秒、上級10秒
   questionLimit=mode==="advanced"?10:5;
-
   pool=makePool();
 
   document.getElementById("menu").style.display="none";
@@ -199,11 +207,10 @@ function nextQuestion(){
   if(!pool.length)pool=makePool();
   q=pool.pop();
 
-  time=questionLimit;
   round++;
-  questionScore=0;
+  questionLocked=false;
 
-  document.getElementById("time").textContent=String(Math.ceil(time));
+  document.getElementById("time").textContent=String(Math.ceil(questionLimit));
   document.getElementById("round").textContent=String(round);
   document.getElementById("prompt").innerHTML=q.text;
   document.getElementById("message").textContent="条件に合う数字をすべてタップ！";
@@ -211,33 +218,36 @@ function nextQuestion(){
   const area=document.getElementById("numbers");
   area.innerHTML="";
 
-  // 数字のマスは毎回1〜10を同じ順番で配置
+  // 数字は1〜10を固定配置
   for(let n=1;n<=10;n++){
+    const cell=document.createElement("div");
+    cell.className="cell";
+
     const b=document.createElement("button");
     b.className="num";
     b.textContent=n;
-    b.onclick=()=>tap(b);
-    area.appendChild(b);
+    b.onclick=()=>tap(b,cell);
+
+    cell.appendChild(b);
+    area.appendChild(cell);
   }
 
-  startTime=Date.now();
+  deadline=Date.now()+questionLimit*1000;
 
   countId=setInterval(()=>{
-    if(!active)return;
+    if(!active||questionLocked)return;
 
-    const elapsed=(Date.now()-startTime)/1000;
-    time=Math.max(0,questionLimit-elapsed);
-    document.getElementById("time").textContent=String(Math.ceil(time));
+    const remaining=Math.max(0,(deadline-Date.now())/1000);
+    document.getElementById("time").textContent=String(Math.ceil(remaining));
 
-    if(time<=0){
-      // 時間切れの瞬間に最後の判定をして終了
+    if(remaining<=0){
       endGame();
     }
   },20);
 }
 
-function tap(b){
-  if(!active||b.classList.contains("correct")||b.disabled)return;
+function tap(b,cell){
+  if(!active||questionLocked||b.disabled)return;
 
   const n=Number(b.textContent);
 
@@ -245,13 +255,18 @@ function tap(b){
     b.classList.add("correct");
     b.disabled=true;
     score++;
-    questionScore++;
     document.getElementById("score").textContent=String(score);
+
+    // 正解時の軽い振動
+    vibrate(15);
 
     const buttons=[...document.querySelectorAll(".num")];
 
     if(buttons.every(x=>!q.test(Number(x.textContent))||x.classList.contains("correct"))){
-      clearTimers();
+      questionLocked=true;
+      clearInterval(countId);
+
+      vibrate([25,40,45]);
 
       // 次の問題は0.25秒短くする
       questionLimit=Math.max(0.25,Math.round((questionLimit-0.25)*100)/100);
@@ -268,48 +283,57 @@ function tap(b){
       document.getElementById("message").textContent=`正解！ あと${remaining}個`;
     }
   }else{
+    // 誤答は1回につき1.5秒減らす
     b.classList.add("wrong");
     b.disabled=true;
-    document.getElementById("message").textContent="違う！ 指示を確認しよう";
+    deadline-=wrongPenalty*1000;
 
-    setTimeout(()=>{
-      b.classList.remove("wrong");
-    },220);
+    // 赤いペナルティ表示
+    const penalty=document.createElement("span");
+    penalty.className="penalty";
+    penalty.textContent="−1.5s";
+    cell.appendChild(penalty);
+    setTimeout(()=>penalty.remove(),900);
+
+    document.getElementById("message").textContent="誤答！ −1.5秒";
+    vibrate([70,35,70]);
+
+    const remaining=Math.max(0,(deadline-Date.now())/1000);
+    document.getElementById("time").textContent=String(Math.ceil(remaining));
+
+    if(remaining<=0){
+      endGame();
+    }
   }
 }
 
 function endGame(){
   if(!active)return;
 
-  // 最終判定：現在の問題で選択済みの数字を確認する
-  // 正解済みの数字はすでにスコアに加算されている
-  const buttons=[...document.querySelectorAll(".num")];
-  let finalCorrect=0;
-
-  buttons.forEach(b=>{
-    const n=Number(b.textContent);
-    if(b.classList.contains("correct")&&q&&q.test(n)){
-      finalCorrect++;
-    }
-    b.disabled=true;
-  });
-
+  // 終了時に操作を止めて最終判定
   active=false;
+  questionLocked=true;
   clearTimers();
 
-  document.getElementById("time").textContent="0";
-  document.getElementById("message").textContent="時間切れ！ 最終判定完了";
+  document.querySelectorAll(".num").forEach(b=>b.disabled=true);
 
+  document.getElementById("time").textContent="0";
   document.getElementById("resultText").textContent=
     `正解数：${score}個 / 挑戦した問題数：${round}問`;
 
   document.getElementById("game").style.display="none";
   document.getElementById("result").style.display="block";
+
+  vibrate([80,50,120]);
 }
 
 function backToMenu(){
   active=false;
+  questionLocked=true;
   clearTimers();
+  try{
+    if("vibrate" in navigator)navigator.vibrate(0);
+  }catch(e){}
 
   document.getElementById("game").style.display="none";
   document.getElementById("result").style.display="none";
