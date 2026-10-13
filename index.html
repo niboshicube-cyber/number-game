@@ -1,0 +1,230 @@
+
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>数字指示ゲーム</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#0c1020;color:#f4f6ff;font-family:system-ui,sans-serif;min-height:100vh;padding:16px}
+main{max-width:520px;margin:auto}
+h1{text-align:center;color:#80e6ff}
+.sub,.hint{color:#aab5d1;text-align:center;font-size:13px}
+.panel{background:#171e34;border:1px solid #2b3657;border-radius:16px;padding:14px;margin:12px 0}
+.row{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.modes{display:flex;gap:8px}
+button{font:inherit;font-weight:bold;border:0;border-radius:12px;padding:12px;cursor:pointer}
+.mode{flex:1;background:#293451;color:white}
+.mode.active,.primary{background:#80e6ff;color:#101629}
+.secondary{background:#293451;color:white}
+.stats{display:flex;justify-content:space-between;color:#aab5d1;font-size:13px;margin-top:12px}
+.stats b{color:white;font-size:18px}
+.prompt{min-height:76px;display:flex;align-items:center;justify-content:center;text-align:center;font-size:23px;font-weight:850;line-height:1.4}
+.grid{display:grid;grid-template-columns:repeat(5,1fr);gap:9px}
+.num{aspect-ratio:1;background:#222d49;border:2px solid #3a486d;color:white;font-size:23px;padding:0;border-radius:14px;touch-action:manipulation}
+.num.selected{background:#ff6384;color:#1a1020}
+.num.correct{background:#7df0b1;color:#0b2a1b}
+.feedback{text-align:center;min-height:28px;color:#80e6ff;margin-top:12px;font-weight:bold}
+.overlay{position:fixed;inset:0;background:#080b16eF;display:flex;align-items:center;justify-content:center;padding:20px;z-index:5}
+.modal{width:100%;max-width:400px;background:#171e34;border:1px solid #3a486d;border-radius:20px;padding:24px;text-align:center}
+.modal p{line-height:1.7;color:#c6d0e8}
+.hidden{display:none!important}
+</style>
+</head>
+<body>
+<main>
+<h1>数字指示ゲーム</h1>
+<p class="sub">指示に合う数字をすばやく選べ！</p>
+<section class="panel">
+<div class="modes">
+<button id="normalMode" class="mode active">普通モード</button>
+<button id="advancedMode" class="mode">上級モード</button>
+</div>
+<div class="stats">
+<span>SCORE <b id="score">0</b></span>
+<span>TIME <b id="time">30.0</b></span>
+<span>BEST <b id="best">0</b></span>
+</div>
+</section>
+<section class="panel">
+<div id="roundLabel">指示 1</div>
+<div class="prompt" id="prompt">素数を選べ</div>
+<p class="sub">条件に合う数字をすべてタップ！</p>
+<div class="grid" id="grid"></div>
+<div class="feedback" id="feedback">スタートを押して開始</div>
+</section>
+<section class="panel row">
+<button id="start" class="primary" style="flex:1">スタート</button>
+<button id="reset" class="secondary">最初から</button>
+</section>
+<p class="hint">正解するたびに次の指示へ！間違えると時間が減るよ。</p>
+</main>
+
+<div class="overlay" id="overlay">
+<div class="modal">
+<h2 id="modalTitle">数字指示ゲーム</h2>
+<p id="modalText">指示に合う数字をすべて選ぼう！<br>制限時間は30秒。</p>
+<button class="primary" id="modalStart">ゲームスタート</button>
+</div>
+</div>
+
+<script>
+const $=id=>document.getElementById(id);
+const grid=$("grid"),overlay=$("overlay");
+const choices=[1,2,3,4,5,6,7,8,9,10];
+let mode="normal",running=false,score=0,round=0;
+let timeLeft=30,lastTick=0,timer=null,selected=new Set(),target=new Set(),locked=false;
+let bests={normal:0,advanced:0};
+
+try{
+bests.normal=Number(localStorage.getItem("numberBestNormal"))||0;
+bests.advanced=Number(localStorage.getItem("numberBestAdvanced"))||0;
+}catch(e){}
+
+function prime(n){
+if(n<2)return false;
+for(let i=2;i*i<=n;i++)if(n%i===0)return false;
+return true;
+}
+
+const normal=[
+["素数を選べ",n=>prime(n)],
+["偶数を選べ",n=>n%2===0],
+["奇数を選べ",n=>n%2!==0],
+["3の倍数を選べ",n=>n%3===0],
+["4の倍数を選べ",n=>n%4===0],
+["6の約数を選べ",n=>6%n===0],
+["8以上の数を選べ",n=>n>=8],
+["5未満の数を選べ",n=>n<5],
+["2の倍数を選べ",n=>n%2===0],
+["3の倍数でも5の倍数でもない数",n=>n%3!==0&&n%5!==0]
+];
+
+const advanced=[
+["素数 かつ 偶数",n=>prime(n)&&n%2===0],
+["3の倍数 または 5の倍数",n=>n%3===0||n%5===0],
+["偶数 でもない",n=>n%2!==0],
+["4の倍数 かつ 8未満",n=>n%4===0&&n<8],
+["素数 または 1",n=>prime(n)||n===1],
+["3の倍数 でも 5の倍数でもない",n=>n%3!==0&&n%5!==0],
+["2の倍数 かつ 3の倍数",n=>n%2===0&&n%3===0],
+["6の約数 または 8の約数",n=>6%n===0||8%n===0],
+["奇数 かつ 5以上",n=>n%2!==0&&n>=5],
+["素数ではない かつ 3以上",n=>!prime(n)&&n>=3]
+];
+
+function renderGrid(){
+grid.innerHTML="";
+choices.forEach(n=>{
+const b=document.createElement("button");
+b.className="num";b.textContent=n;
+b.addEventListener("click",()=>choose(n,b));
+grid.appendChild(b);
+});
+}
+
+function updateBest(){
+$("best").textContent=bests[mode];
+}
+
+function setMode(m){
+if(running)return;
+mode=m;
+$("normalMode").classList.toggle("active",m==="normal");
+$("advancedMode").classList.toggle("active",m==="advanced");
+updateBest();newRound();
+$("feedback").textContent="スタートを押して開始";
+}
+
+function newRound(){
+selected=new Set();locked=false;
+const list=mode==="normal"?normal:advanced;
+let question;
+do{
+question=list[Math.floor(Math.random()*list.length)];
+target=new Set(choices.filter(question[1]));
+}while(target.size===0||target.size===10);
+$("prompt").textContent=question[0];
+$("roundLabel").textContent="指示 "+(round+1);
+[...grid.children].forEach(b=>{
+b.className="num";b.disabled=!running;
+});
+}
+
+function choose(n,b){
+if(!running||locked||selected.has(n))return;
+selected.add(n);b.classList.add("selected");
+if(!target.has(n)){
+$("feedback").textContent="不正解！ 1.5秒減少";
+timeLeft=Math.max(0,timeLeft-1.5);
+return;
+}
+b.classList.add("correct");
+const remaining=[...target].filter(x=>!selected.has(x)).length;
+if(remaining===0){
+locked=true;
+score+=target.size*10+Math.floor(timeLeft/5);
+$("score").textContent=score;
+$("feedback").textContent="正解！ 次の指示へ";
+round++;
+timeLeft=Math.max(0,timeLeft-0.2);
+setTimeout(()=>{if(running)newRound()},450);
+}else{
+$("feedback").textContent="正解！ あと"+remaining+"個";
+}
+}
+
+function startGame(){
+clearInterval(timer);
+score=0;round=0;timeLeft=30;running=true;
+$("score").textContent="0";$("time").textContent="30.0";
+$("start").textContent="プレイ中";$("start").disabled=true;
+overlay.classList.add("hidden");
+newRound();lastTick=performance.now();
+timer=setInterval(()=>{
+const now=performance.now();
+timeLeft=Math.max(0,timeLeft-(now-lastTick)/1000);
+lastTick=now;
+$("time").textContent=timeLeft.toFixed(1);
+if(timeLeft<=0)endGame();
+},50);
+}
+
+function endGame(){
+running=false;clearInterval(timer);
+[...grid.children].forEach(b=>b.disabled=true);
+if(score>bests[mode]){
+bests[mode]=score;
+try{localStorage.setItem(mode==="normal"?"numberBestNormal":"numberBestAdvanced",score)}catch(e){}
+}
+updateBest();
+$("start").disabled=false;$("start").textContent="もう一度遊ぶ";
+$("modalTitle").textContent="タイムアップ！";
+$("modalText").innerHTML="スコア："+score+"<br>正解した指示："+round+"問";
+$("modalStart").textContent="もう一度遊ぶ";
+overlay.classList.remove("hidden");
+$("feedback").textContent="ゲーム終了！";
+}
+
+function resetGame(){
+running=false;clearInterval(timer);
+score=0;round=0;timeLeft=30;
+$("score").textContent="0";$("time").textContent="30.0";
+$("start").disabled=false;$("start").textContent="スタート";
+$("modalTitle").textContent="数字指示ゲーム";
+$("modalText").innerHTML="指示に合う数字をすべて選ぼう！<br>制限時間は30秒。";
+$("modalStart").textContent="ゲームスタート";
+overlay.classList.remove("hidden");
+newRound();$("feedback").textContent="スタートを押して開始";
+}
+
+$("normalMode").addEventListener("click",()=>setMode("normal"));
+$("advancedMode").addEventListener("click",()=>setMode("advanced"));
+$("start").addEventListener("click",startGame);
+$("modalStart").addEventListener("click",startGame);
+$("reset").addEventListener("click",resetGame);
+renderGrid();updateBest();newRound();
+</script>
+</body>
+</html>
