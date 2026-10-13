@@ -3,115 +3,299 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>NUMBER LOGIC</title>
+
 <style>
 *{box-sizing:border-box}
-body{margin:0;padding:18px 14px;background:#101522;color:#f3f5fb;font-family:-apple-system,BlinkMacSystemFont,sans-serif;text-align:center}
-h1{font-size:29px}
-.sub,.note{color:#aab4cc}
-.wrap{max-width:460px;margin:auto}
-button{font:inherit;cursor:pointer;touch-action:manipulation}
-.modes,.stats{display:flex;gap:9px;margin:18px 0}
-.mode,.stat{flex:1;padding:13px 5px;border:2px solid #46516b;border-radius:12px;background:#1a2234;color:white}
-.mode strong,.stat strong{display:block;font-size:21px;margin-bottom:5px}
-.mode small{color:#bdc7dc}
-.selected{border-color:#71d7ff;background:#18364a}
-.primary{padding:13px 24px;border:0;border-radius:10px;background:#71d7ff;color:#101522;font-weight:bold}
-.secondary{margin:12px;padding:10px 18px;border:1px solid #53617e;border-radius:9px;background:transparent;color:#e0e7f7}
-#game,#result{display:none}
-.stat{font-size:12px;color:#bdc7dc;border-width:1px}
-.stat strong{color:white;font-size:22px;margin:5px 0 0}
-.instruction{padding:15px 10px;margin:15px 0;border:2px solid #7f91b7;border-radius:12px;background:#202b43}
-.label{font-size:12px;color:#aebcda;margin-bottom:7px}
-#prompt{font-size:20px;font-weight:bold;line-height:1.7}
-.logic{display:inline-block;padding:1px 6px;border:1px solid #ffc66d;border-radius:5px;background:#49391f;color:#ffdb99}
-#numbers{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;margin:16px 0}
+body{
+  margin:0;
+  background:#10131c;
+  color:#f3f5fc;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  text-align:center;
+  min-height:100vh;
+}
+.container{
+  width:min(520px,94%);
+  margin:0 auto;
+  padding:28px 0 40px;
+}
+h1{
+  font-size:32px;
+  letter-spacing:4px;
+  margin:12px 0 6px;
+}
+.subtitle{
+  color:#8d96ad;
+  font-size:12px;
+  letter-spacing:3px;
+  margin-bottom:28px;
+}
+button{font:inherit;cursor:pointer}
+.mode-buttons{
+  display:flex;
+  gap:12px;
+  margin:24px 0;
+}
+.mode-button{
+  flex:1;
+  padding:17px 8px;
+  border:1px solid #414960;
+  border-radius:12px;
+  background:#1b2130;
+  color:#f3f5fc;
+  font-weight:700;
+  font-size:16px;
+}
+.mode-button:hover{background:#28334a}
+.mode-button small{
+  display:block;
+  margin-top:7px;
+  font-size:11px;
+  color:#9da9c2;
+  font-weight:400;
+}
+.info{
+  color:#a7b0c6;
+  font-size:13px;
+  line-height:1.9;
+}
+.panel{
+  border:1px solid #323b51;
+  background:#181e2c;
+  border-radius:14px;
+  padding:17px 15px;
+  margin:17px 0;
+}
+.topbar{
+  display:flex;
+  justify-content:space-between;
+  gap:12px;
+  align-items:center;
+  font-size:13px;
+  color:#b7c0d5;
+}
+#timer{
+  color:#f6d365;
+  font-size:25px;
+  font-weight:800;
+  font-variant-numeric:tabular-nums;
+}
+.progress{
+  height:5px;
+  background:#30384b;
+  border-radius:10px;
+  overflow:hidden;
+  margin-top:10px;
+}
+#timebar{
+  width:100%;
+  height:100%;
+  background:#f6d365;
+  transition:width .08s linear;
+}
+.instruction{
+  border:1px solid #46516b;
+  border-radius:12px;
+  background:#141a27;
+  padding:20px 12px;
+  margin:20px 0;
+  line-height:2;
+  font-size:17px;
+  font-weight:650;
+  overflow-wrap:anywhere;
+}
+.logic{
+  display:inline-block;
+  padding:1px 7px;
+  margin:0 3px;
+  border:1px solid #7483a4;
+  border-radius:6px;
+  background:#29334a;
+  color:#d9e4ff;
+  font-size:.9em;
+  white-space:nowrap;
+}
+#numbers{
+  display:grid;
+  grid-template-columns:repeat(5,minmax(0,1fr));
+  gap:10px;
+  margin:22px 0;
+}
 .cell{position:relative;min-width:0}
-.num{width:100%;aspect-ratio:1;border:1px solid #465573;border-radius:12px;background:#202a40;color:white;font-size:27px;font-weight:bold}
-.num.correct{background:#17684d;border-color:#58e0a5}
-.num.wrong{background:#792f3b;border-color:#ff7787;animation:shake .2s ease}
+.num{
+  width:100%;
+  aspect-ratio:1;
+  border:1px solid #414b63;
+  border-radius:12px;
+  background:#20283a;
+  color:#f3f5fc;
+  font-size:24px;
+  font-weight:750;
+  transition:background .12s,border-color .12s,transform .12s;
+}
+.num:active{transform:scale(.94)}
+.num.correct{
+  background:#1d654e;
+  border-color:#54d6a6;
+  color:#eafff6;
+}
+.num.wrong{
+  background:#742e3b;
+  border-color:#ff5364;
+  animation:shake .2s linear;
+}
 .num:disabled{cursor:default}
-.penalty{position:absolute;z-index:2;left:50%;top:50%;transform:translate(-50%,-50%);font-size:19px;font-weight:900;color:#ff5364;text-shadow:0 1px 5px #101522;white-space:nowrap;pointer-events:none;animation:floatUp .85s ease-out forwards}
-@keyframes floatUp{0%{opacity:0;translate:0 8px}20%{opacity:1}100%{opacity:0;translate:0 -35px}}
-@keyframes shake{25%{transform:translateX(-3px)}75%{transform:translateX(3px)}}
-#message{min-height:27px;margin:12px 0;font-weight:bold}
-.note{font-size:12px;line-height:1.7;margin-top:14px}
-button:disabled{cursor:default}
+.penalty{
+  position:absolute;
+  z-index:2;
+  left:50%;
+  top:50%;
+  transform:translate(-50%,-50%);
+  font-size:19px;
+  font-weight:900;
+  color:#ff5364;
+  text-shadow:0 1px 5px #101522;
+  white-space:nowrap;
+  pointer-events:none;
+  animation:floatUp .85s ease-out forwards;
+}
+@keyframes floatUp{
+  0%{opacity:0;translate:0 8px}
+  20%{opacity:1}
+  100%{opacity:0;translate:0 -35px}
+}
+@keyframes shake{
+  0%,100%{transform:translateX(0)}
+  25%{transform:translateX(-3px)}
+  75%{transform:translateX(3px)}
+}
+#message{
+  min-height:24px;
+  color:#b9c6e2;
+  font-size:14px;
+  margin:10px 0;
+}
+.scoreline{
+  display:flex;
+  justify-content:space-around;
+  gap:10px;
+  color:#aeb8ce;
+  font-size:13px;
+}
+.scoreline strong{
+  display:block;
+  color:#f3f5fc;
+  font-size:22px;
+  margin-top:5px;
+}
+.primary{
+  width:100%;
+  padding:15px;
+  border:0;
+  border-radius:11px;
+  background:#627cf6;
+  color:white;
+  font-size:16px;
+  font-weight:750;
+  margin-top:12px;
+}
+.primary:hover{background:#7890ff}
+.secondary{
+  width:100%;
+  padding:13px;
+  border:1px solid #414960;
+  border-radius:11px;
+  background:#1b2130;
+  color:#dce3f5;
+  margin-top:10px;
+}
+.hidden{display:none!important}
+#result h2{font-size:24px}
+#resultScore{
+  font-size:25px;
+  font-weight:800;
+  margin:25px 0;
+}
+.result-note{
+  color:#aab4ca;
+  font-size:13px;
+  line-height:1.8;
+}
+@media(max-width:360px){
+  .container{width:94%}
+  #numbers{gap:7px}
+  .num{font-size:21px}
+  .instruction{font-size:15px}
+}
 </style>
 </head>
+
 <body>
+<div class="container">
+  <h1>NUMBER LOGIC</h1>
+  <div class="subtitle">THINK FAST. FIND THE NUMBERS.</div>
 
-<h1>NUMBER LOGIC</h1>
-<div class="sub">条件に合う数字をすべてタップ！</div>
+  <section id="menu">
+    <p class="info">
+      お題の条件に当てはまる数字をタップしよう。<br>
+      間違えると残り時間が減るぞ。
+    </p>
 
-<section id="menu" class="wrap">
-  <div class="modes">
-    <button class="mode selected" id="normalBtn" onclick="setMode('normal')">
-      <strong>初級</strong><small>素数・偶数・倍数など</small>
-    </button>
-    <button class="mode" id="advancedBtn" onclick="setMode('advanced')">
-      <strong>上級</strong><small>かつ・または・ではない</small>
-    </button>
-  </div>
-  <button class="primary" onclick="startGame()">ゲームスタート</button>
-  <div class="note">正解して次の問題に進むたび、制限時間が0.25秒ずつ短くなるよ。誤答は1.5秒のペナルティ！</div>
-</section>
+    <div class="mode-buttons">
+      <button class="mode-button" onclick="startGame('normal')">
+        初級
+        <small>制限時間 5秒</small>
+      </button>
+      <button class="mode-button" onclick="startGame('advanced')">
+        上級
+        <small>制限時間 10秒・自由な組み合わせ</small>
+      </button>
+    </div>
 
-<section id="game" class="wrap">
-  <div class="stats">
-    <div class="stat">残り時間<strong id="time">5</strong></div>
-    <div class="stat">正解数<strong id="score">0</strong></div>
-    <div class="stat">問題数<strong id="round">1</strong></div>
-  </div>
+    <div class="panel info">
+      数字は1〜10。正解をタップすると得点。<br>
+      問題をクリアするたびに制限時間が短くなる。<br>
+      誤答すると残り時間が1.5秒減る。
+    </div>
+  </section>
 
-  <div class="instruction">
-    <div class="label">今回の指示</div>
-    <div id="prompt"></div>
-  </div>
+  <section id="game" class="hidden">
+    <div class="topbar">
+      <span id="modeLabel">初級</span>
+      <span>問題 <strong id="round">1</strong></span>
+      <span>正解数 <strong id="score">0</strong></span>
+      <span id="timer">5</span>
+    </div>
 
-  <div id="numbers"></div>
-  <div id="message">条件に合う数字をすべてタップ！</div>
-  <button class="secondary" onclick="backToMenu()">モード選択に戻る</button>
-</section>
+    <div class="progress">
+      <div id="timebar"></div>
+    </div>
 
-<section id="result" class="wrap">
-  <h2>ゲーム終了！</h2>
-  <p id="resultText"></p>
-  <button class="primary" onclick="startGame()">もう一度プレイ</button>
-  <br>
-  <button class="secondary" onclick="backToMenu()">モード選択に戻る</button>
-</section>
+    <div id="instruction" class="instruction"></div>
+    <div id="numbers"></div>
+    <div id="message">当てはまる数字をすべて選ぼう！</div>
+
+    <div class="scoreline panel">
+      <div>今回の正解数<strong id="roundScore">0</strong></div>
+      <div>挑戦した問題数<strong id="roundCount">0</strong></div>
+    </div>
+
+    <button class="secondary" onclick="backToMenu()">メニューに戻る</button>
+  </section>
+
+  <section id="result" class="hidden">
+    <h2>GAME OVER</h2>
+    <div id="resultScore"></div>
+    <p class="result-note" id="resultNote"></p>
+    <button class="primary" onclick="startGame(mode)">もう一度挑戦</button>
+    <button class="secondary" onclick="backToMenu()">メニューに戻る</button>
+  </section>
+</div>
 
 <script>
-const normalQuestions = [
-  {text:"素数",test:n=>prime(n)},
-  {text:"偶数",test:n=>n%2===0},
-  {text:"奇数",test:n=>n%2!==0},
-  {text:"3の倍数",test:n=>n%3===0},
-  {text:"4の倍数",test:n=>n%4===0},
-  {text:"5の倍数",test:n=>n%5===0},
-  {text:"6の約数",test:n=>6%n===0},
-  {text:"8以上の数",test:n=>n>=8},
-  {text:"5未満の数",test:n=>n<5},
-  {text:"10の約数",test:n=>10%n===0}
-];
-
-const advancedQuestions = [
-  {text:'素数 <span class="logic">かつ</span> 偶数',test:n=>prime(n)&&n%2===0},
-  {text:'3の倍数 <span class="logic">または</span> 5の倍数',test:n=>n%3===0||n%5===0},
-  {text:'偶数 <span class="logic">ではない</span>',test:n=>n%2!==0},
-  {text:'4の倍数 <span class="logic">かつ</span> 8未満',test:n=>n%4===0&&n<8},
-  {text:'素数 <span class="logic">または</span> 1',test:n=>prime(n)||n===1},
-  {text:'3の倍数 <span class="logic">でも</span> 5の倍数 <span class="logic">でもない</span>',test:n=>n%3!==0&&n%5!==0},
-  {text:'2の倍数 <span class="logic">かつ</span> 3の倍数',test:n=>n%2===0&&n%3===0},
-  {text:'6の約数 <span class="logic">または</span> 8の約数',test:n=>6%n===0||8%n===0},
-  {text:'奇数 <span class="logic">かつ</span> 5以上',test:n=>n%2!==0&&n>=5},
-  {text:'素数 <span class="logic">ではない</span> <span class="logic">かつ</span> 3以上',test:n=>!prime(n)&&n>=3}
-];
-
 let mode="normal";
-let pool=[];
 let q=null;
 let score=0;
 let questionLimit=5;
@@ -122,103 +306,262 @@ let nextId=null;
 let deadline=0;
 let wrongPenalty=1.5;
 let questionLocked=false;
+let currentCorrect=new Set();
+let selectedCorrect=new Set();
+let questionAnswered=false;
 
-function prime(n){
-  if(n<2)return false;
+/* iPhoneなど、振動に対応しない端末でも動くようにする */
+function vibrate(pattern){
+  try{
+    if("vibrate" in navigator) navigator.vibrate(pattern);
+  }catch(e){}
+}
+
+function clearTimers(){
+  if(countId!==null){
+    clearInterval(countId);
+    countId=null;
+  }
+  if(nextId!==null){
+    clearTimeout(nextId);
+    nextId=null;
+  }
+}
+
+/* 1〜10の条件を作るための部品 */
+function makePredicates(){
+  const predicates=[];
+
+  predicates.push({
+    type:"even",
+    label:"偶数",
+    test:n=>n%2===0
+  });
+  predicates.push({
+    type:"odd",
+    label:"奇数",
+    test:n=>n%2!==0
+  });
+  predicates.push({
+    type:"prime",
+    label:"素数",
+    test:n=>isPrime(n)
+  });
+  predicates.push({
+    type:"notPrime",
+    label:"素数ではない",
+    test:n=>!isPrime(n)
+  });
+  predicates.push({
+    type:"square",
+    label:"平方数",
+    test:n=>Number.isInteger(Math.sqrt(n))
+  });
+  predicates.push({
+    type:"multiple3",
+    label:"3の倍数",
+    test:n=>n%3===0
+  });
+  predicates.push({
+    type:"multiple4",
+    label:"4の倍数",
+    test:n=>n%4===0
+  });
+  predicates.push({
+    type:"multiple5",
+    label:"5の倍数",
+    test:n=>n%5===0
+  });
+  predicates.push({
+    type:"multiple7",
+    label:"7の倍数",
+    test:n=>n%7===0
+  });
+  predicates.push({
+    type:"multiple2",
+    label:"2の倍数",
+    test:n=>n%2===0
+  });
+
+  predicates.push({
+    type:"le3",
+    label:"3以下",
+    test:n=>n<=3
+  });
+  predicates.push({
+    type:"le5",
+    label:"5以下",
+    test:n=>n<=5
+  });
+  predicates.push({
+    type:"le7",
+    label:"7以下",
+    test:n=>n<=7
+  });
+  predicates.push({
+    type:"ge4",
+    label:"4以上",
+    test:n=>n>=4
+  });
+  predicates.push({
+    type:"ge6",
+    label:"6以上",
+    test:n=>n>=6
+  });
+  predicates.push({
+    type:"ge8",
+    label:"8以上",
+    test:n=>n>=8
+  });
+
+  /* Nの約数。Nは問題ごとにランダムに変わる */
+  const N=Math.floor(Math.random()*200)+1;
+  predicates.push({
+    type:"divisor",
+    label:`${N}の約数`,
+    test:n=>N%n===0
+  });
+
+  /* Nの倍数ではなく、Nで割り切れる数を1〜10から選ぶ条件 */
+  return predicates;
+}
+
+function isPrime(n){
+  if(n<2) return false;
   for(let i=2;i*i<=n;i++){
-    if(n%i===0)return false;
+    if(n%i===0) return false;
   }
   return true;
 }
 
-function shuffle(a){
-  for(let i=a.length-1;i>0;i--){
-    const j=Math.floor(Math.random()*(i+1));
-    [a[i],a[j]]=[a[j],a[i]];
-  }
+function randomItem(arr){
+  return arr[Math.floor(Math.random()*arr.length)];
 }
 
-function clearTimers(){
-  clearInterval(countId);
-  clearTimeout(nextId);
-  countId=null;
-  nextId=null;
-}
+/* 同じ条件が2回出るのを避けて、2つの条件を自由に選ぶ */
+function makeAdvancedQuestion(){
+  const predicates=makePredicates();
+  const firstIndex=Math.floor(Math.random()*predicates.length);
+  const first=predicates[firstIndex];
 
-// 対応ブラウザでは振動。未対応なら何もしない
-function vibrate(pattern){
-  try{
-    if("vibrate" in navigator)navigator.vibrate(pattern);
-  }catch(e){}
-}
+  const remaining=predicates.filter((p,i)=>i!==firstIndex);
+  const second=randomItem(remaining);
 
-function setMode(m){
-  if(active)return;
-  mode=m;
-  document.getElementById("normalBtn").classList.toggle("selected",m==="normal");
-  document.getElementById("advancedBtn").classList.toggle("selected",m==="advanced");
-}
+  const connector=Math.random()<0.5?"and":"or";
+  const negateFirst=Math.random()<0.25;
+  const negateSecond=Math.random()<0.25;
 
-function makePool(){
-  const base=[...(mode==="normal"?normalQuestions:advancedQuestions)];
+  const testFirst=n=>negateFirst?!first.test(n):first.test(n);
+  const testSecond=n=>negateSecond?!second.test(n):second.test(n);
 
-  // 1〜200の数字の約数を問う問題を追加
-  for(let i=0;i<10;i++){
-    const target=Math.floor(Math.random()*200)+1;
-    const matches=[];
-    for(let n=1;n<=10;n++){
-      if(target%n===0)matches.push(n);
-    }
-    if(matches.length>0&&matches.length<10){
-      base.push({
-        text:`${target}の約数`,
-        test:n=>target%n===0
-      });
-    }
+  let labelFirst=first.label;
+  let labelSecond=second.label;
+
+  if(negateFirst) labelFirst=`${labelFirst}ではない`;
+  if(negateSecond) labelSecond=`${labelSecond}ではない`;
+
+  const connectorLabel=connector==="and"?"かつ":"または";
+  const correct=[];
+
+  for(let n=1;n<=10;n++){
+    const a=testFirst(n);
+    const b=testSecond(n);
+    const ok=connector==="and"?(a&&b):(a||b);
+    if(ok) correct.push(n);
   }
 
-  shuffle(base);
-  return base;
+  return {
+    label:`${labelFirst}<span class="logic">${connectorLabel}</span>${labelSecond}`,
+    correct:correct,
+    first:first,
+    second:second,
+    connector:connector,
+    test:n=>{
+      const a=testFirst(n);
+      const b=testSecond(n);
+      return connector==="and"?(a&&b):(a||b);
+    }
+  };
 }
 
-function startGame(){
+/* 初級は一つの条件を中心に出題 */
+function makeNormalQuestion(){
+  const predicates=makePredicates();
+  const p=randomItem(predicates);
+  const correct=[];
+
+  for(let n=1;n<=10;n++){
+    if(p.test(n)) correct.push(n);
+  }
+
+  return {
+    label:p.label,
+    correct:correct,
+    test:p.test
+  };
+}
+
+function makeQuestion(){
+  let question;
+
+  if(mode==="advanced"){
+    question=makeAdvancedQuestion();
+  }else{
+    question=makeNormalQuestion();
+  }
+
+  /* 正解が0個または10個になる問題を避ける */
+  if(question.correct.length===0 || question.correct.length===10){
+    return makeQuestion();
+  }
+
+  return question;
+}
+
+function startGame(selectedMode){
   clearTimers();
+
+  mode=selectedMode||mode;
   score=0;
   round=0;
   active=true;
   questionLocked=false;
-
-  // 初級5秒、上級10秒
   questionLimit=mode==="advanced"?10:5;
-  pool=makePool();
 
-  document.getElementById("menu").style.display="none";
-  document.getElementById("result").style.display="none";
-  document.getElementById("game").style.display="block";
+  document.getElementById("menu").classList.add("hidden");
+  document.getElementById("result").classList.add("hidden");
+  document.getElementById("game").classList.remove("hidden");
+
+  document.getElementById("modeLabel").textContent=
+    mode==="advanced"?"上級":"初級";
+
   document.getElementById("score").textContent="0";
+  document.getElementById("roundScore").textContent="0";
+  document.getElementById("roundCount").textContent="0";
 
   nextQuestion();
 }
 
 function nextQuestion(){
-  if(!active)return;
-  clearTimers();
+  if(!active) return;
 
-  if(!pool.length)pool=makePool();
-  q=pool.pop();
+  clearTimers();
+  questionLocked=false;
+  questionAnswered=false;
+  selectedCorrect=new Set();
+
+  q=makeQuestion();
+  currentCorrect=new Set(q.correct);
 
   round++;
-  questionLocked=false;
+  document.getElementById("round").textContent=round;
+  document.getElementById("instruction").innerHTML=q.label;
+  document.getElementById("message").textContent=
+    "当てはまる数字をすべて選ぼう！";
 
-  document.getElementById("time").textContent=String(Math.ceil(questionLimit));
-  document.getElementById("round").textContent=String(round);
-  document.getElementById("prompt").innerHTML=q.text;
-  document.getElementById("message").textContent="条件に合う数字をすべてタップ！";
+  const board=document.getElementById("numbers");
+  board.innerHTML="";
 
-  const area=document.getElementById("numbers");
-  area.innerHTML="";
-
-  // 数字は1〜10を固定配置
   for(let n=1;n<=10;n++){
     const cell=document.createElement("div");
     cell.className="cell";
@@ -226,103 +569,110 @@ function nextQuestion(){
     const b=document.createElement("button");
     b.className="num";
     b.textContent=n;
-    b.onclick=()=>tap(b,cell);
+    b.setAttribute("aria-label",`数字${n}`);
+    b.addEventListener("click",()=>tap(b,cell,n));
 
     cell.appendChild(b);
-    area.appendChild(cell);
+    board.appendChild(cell);
   }
 
+  document.getElementById("roundScore").textContent="0";
+  document.getElementById("roundCount").textContent=round;
+
   deadline=Date.now()+questionLimit*1000;
-
-  countId=setInterval(()=>{
-    if(!active||questionLocked)return;
-
-    const remaining=Math.max(0,(deadline-Date.now())/1000);
-    document.getElementById("time").textContent=String(Math.ceil(remaining));
-
-    if(remaining<=0){
-      endGame();
-    }
-  },20);
+  updateTimer();
+  countId=setInterval(updateTimer,40);
 }
 
-function tap(b,cell){
-  if(!active||questionLocked||b.disabled)return;
+function updateTimer(){
+  if(!active||questionLocked) return;
 
-  const n=Number(b.textContent);
+  const remaining=(deadline-Date.now())/1000;
+  const display=Math.max(0,Math.ceil(remaining));
+
+  document.getElementById("timer").textContent=display;
+  document.getElementById("timebar").style.width=
+    Math.max(0,Math.min(100,remaining/questionLimit*100))+"%";
+
+  if(remaining<=0){
+    endGame();
+  }
+}
+
+function tap(button,cell,n){
+  if(!active||questionLocked||button.disabled) return;
+
+  button.disabled=true;
 
   if(q.test(n)){
-    b.classList.add("correct");
-    b.disabled=true;
+    button.classList.add("correct");
+    selectedCorrect.add(n);
     score++;
-    document.getElementById("score").textContent=String(score);
 
-    // 正解時の軽い振動
+    document.getElementById("score").textContent=score;
+    document.getElementById("roundScore").textContent=selectedCorrect.size;
+    document.getElementById("message").textContent="正解！";
+
     vibrate(15);
 
-    const buttons=[...document.querySelectorAll(".num")];
-
-    if(buttons.every(x=>!q.test(Number(x.textContent))||x.classList.contains("correct"))){
+    /* 正解となる数字をすべて選んだら次の問題へ */
+    if(selectedCorrect.size===currentCorrect.size){
       questionLocked=true;
-      clearInterval(countId);
+      questionAnswered=true;
+      clearTimers();
 
       vibrate([25,40,45]);
 
-      // 次の問題は0.25秒短くする
-      questionLimit=Math.max(0.25,Math.round((questionLimit-0.25)*100)/100);
-
-      document.getElementById("message").textContent="正解！ 次の問題へ";
+      questionLimit=Math.max(0.25,questionLimit-0.25);
+      document.getElementById("message").textContent="全問正解！ 次の問題へ…";
 
       nextId=setTimeout(()=>{
-        if(active)nextQuestion();
+        if(active) nextQuestion();
       },350);
-    }else{
-      const remaining=buttons.filter(
-        x=>q.test(Number(x.textContent))&&!x.classList.contains("correct")
-      ).length;
-      document.getElementById("message").textContent=`正解！ あと${remaining}個`;
     }
   }else{
-    // 誤答は1回につき1.5秒減らす
-    b.classList.add("wrong");
-    b.disabled=true;
+    button.classList.add("wrong");
+
     deadline-=wrongPenalty*1000;
 
-    // 赤いペナルティ表示
     const penalty=document.createElement("span");
     penalty.className="penalty";
     penalty.textContent="−1.5s";
     cell.appendChild(penalty);
-    setTimeout(()=>penalty.remove(),900);
+
+    setTimeout(()=>{
+      if(penalty.parentNode) penalty.remove();
+    },900);
 
     document.getElementById("message").textContent="誤答！ −1.5秒";
     vibrate([70,35,70]);
-
-    const remaining=Math.max(0,(deadline-Date.now())/1000);
-    document.getElementById("time").textContent=String(Math.ceil(remaining));
-
-    if(remaining<=0){
-      endGame();
-    }
+    updateTimer();
   }
 }
 
 function endGame(){
-  if(!active)return;
+  if(!active) return;
 
-  // 終了時に操作を止めて最終判定
   active=false;
   questionLocked=true;
   clearTimers();
 
-  document.querySelectorAll(".num").forEach(b=>b.disabled=true);
+  document.querySelectorAll(".num").forEach(button=>{
+    button.disabled=true;
+  });
 
-  document.getElementById("time").textContent="0";
-  document.getElementById("resultText").textContent=
+  document.getElementById("timer").textContent="0";
+  document.getElementById("timebar").style.width="0%";
+  document.getElementById("game").classList.add("hidden");
+  document.getElementById("result").classList.remove("hidden");
+
+  document.getElementById("resultScore").textContent=
     `正解数：${score}個 / 挑戦した問題数：${round}問`;
 
-  document.getElementById("game").style.display="none";
-  document.getElementById("result").style.display="block";
+  document.getElementById("resultNote").textContent=
+    mode==="advanced"
+      ?"上級に挑戦お疲れさま！ 条件の組み合わせを見抜こう。"
+      :"挑戦お疲れさま！ 次はさらに記録を伸ばそう。";
 
   vibrate([80,50,120]);
 }
@@ -331,13 +681,14 @@ function backToMenu(){
   active=false;
   questionLocked=true;
   clearTimers();
+
   try{
-    if("vibrate" in navigator)navigator.vibrate(0);
+    if("vibrate" in navigator) navigator.vibrate(0);
   }catch(e){}
 
-  document.getElementById("game").style.display="none";
-  document.getElementById("result").style.display="none";
-  document.getElementById("menu").style.display="block";
+  document.getElementById("game").classList.add("hidden");
+  document.getElementById("result").classList.add("hidden");
+  document.getElementById("menu").classList.remove("hidden");
 }
 </script>
 </body>
