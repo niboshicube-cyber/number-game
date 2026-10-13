@@ -36,56 +36,15 @@ button{font:inherit;cursor:pointer}
 @keyframes floatUp{0%{opacity:0;translate:0 8px}20%{opacity:1}100%{opacity:0;translate:0 -35px}}
 @keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-3px)}75%{transform:translateX(3px)}}
 
-/* 合計得点と加算表示 */
-.score-display{
-  border:1px solid #46516b;
-  border-radius:14px;
-  background:#181e2c;
-  padding:15px 10px 17px;
-  margin:18px 0;
-}
+.score-display{border:1px solid #46516b;border-radius:14px;background:#181e2c;padding:15px 10px 17px;margin:18px 0}
 .score-caption{color:#aeb8ce;font-size:13px;letter-spacing:2px}
-.score-value-row{
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  gap:12px;
-  flex-wrap:wrap;
-  margin-top:6px;
-}
-#score{
-  color:#f6d365;
-  font-size:clamp(38px,10vw,54px);
-  line-height:1.15;
-  font-weight:900;
-  font-variant-numeric:tabular-nums;
-  overflow-wrap:anywhere;
-}
+.score-value-row{display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap;margin-top:6px}
+#score{color:#f6d365;font-size:clamp(38px,10vw,54px);line-height:1.15;font-weight:900;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
 .score-unit{font-size:16px;color:#f6d365;font-weight:700}
-#scoreGain{
-  color:#6de2ae;
-  font-size:20px;
-  font-weight:850;
-  white-space:nowrap;
-  opacity:0;
-  transform:translateY(5px) scale(.92);
-  pointer-events:none;
-}
-#scoreGain.show{
-  animation:gainPop .9s ease-out forwards;
-}
-#scoreGain.big{
-  color:#ffe16b;
-  font-size:clamp(27px,7vw,36px);
-  text-shadow:0 0 12px rgba(255,225,107,.3);
-}
-@keyframes gainPop{
-  0%{opacity:0;transform:translateY(7px) scale(.85)}
-  18%{opacity:1;transform:translateY(0) scale(1.08)}
-  35%{opacity:1;transform:translateY(0) scale(1)}
-  100%{opacity:0;transform:translateY(-9px) scale(1)}
-}
-
+#scoreGain{color:#6de2ae;font-size:20px;font-weight:850;white-space:nowrap;opacity:0;transform:translateY(5px) scale(.92);pointer-events:none}
+#scoreGain.show{animation:gainPop .9s ease-out forwards}
+#scoreGain.big{color:#ffe16b;font-size:clamp(27px,7vw,36px);text-shadow:0 0 12px rgba(255,225,107,.3)}
+@keyframes gainPop{0%{opacity:0;transform:translateY(7px) scale(.85)}18%{opacity:1;transform:translateY(0) scale(1.08)}35%{opacity:1;transform:translateY(0) scale(1)}100%{opacity:0;transform:translateY(-9px) scale(1)}}
 #message{min-height:24px;color:#b9c6e2;font-size:14px;margin:10px 0}
 .primary{width:100%;padding:15px;border:0;border-radius:11px;background:#627cf6;color:white;font-size:16px;font-weight:750;margin-top:12px}
 .primary:hover{background:#7890ff}
@@ -94,13 +53,7 @@ button{font:inherit;cursor:pointer}
 #result h2{font-size:24px}
 #resultScore{font-size:clamp(23px,6vw,32px);font-weight:850;overflow-wrap:anywhere;margin:25px 0}
 .result-note{color:#aab4ca;font-size:13px;line-height:1.8}
-@media(max-width:360px){
-  .container{width:94%}
-  #numbers{gap:7px}
-  .num{font-size:21px}
-  .instruction{font-size:15px}
-  .score-value-row{gap:7px}
-}
+@media(max-width:360px){.container{width:94%}#numbers{gap:7px}.num{font-size:21px}.instruction{font-size:15px}.score-value-row{gap:7px}}
 </style>
 </head>
 <body>
@@ -150,7 +103,6 @@ button{font:inherit;cursor:pointer}
     <div id="instruction" class="instruction"></div>
     <div id="numbers"></div>
     <div id="message">当てはまる数字をすべて選ぼう！</div>
-
     <button class="secondary" onclick="backToMenu()">メニューに戻る</button>
   </section>
 
@@ -209,10 +161,7 @@ function randomItem(arr){
   return arr[Math.floor(Math.random()*arr.length)];
 }
 
-/*
- * 条件ごとの難易度。
- * 約数は1〜200から選び、1〜10の約数が3個以上ある数だけを採用。
- */
+/* 条件を作成。約数は1〜200で、1〜10の約数が3個以上の数に限定 */
 function makePredicates(){
   const predicates=[];
 
@@ -228,7 +177,7 @@ function makePredicates(){
       type:item.type,
       value:item.value,
       label:item.label,
-      difficulty:500+(item.value*10),
+      difficulty:500+item.value*10,
       test:item.type==="le"
         ?n=>n<=item.value
         :n=>n>=item.value
@@ -262,16 +211,14 @@ function makePredicates(){
 
   for(let N=1;N<=200;N++){
     const divisors=[];
+
     for(let n=1;n<=10;n++){
       if(N%n===0)divisors.push(n);
     }
 
     if(divisors.length<3)continue;
 
-    const difficulty=
-      2500+
-      N*5+
-      (divisors.length-3)*500;
+    const difficulty=2500+N*5+(divisors.length-3)*500;
 
     predicates.push({
       type:"divisor",
@@ -285,8 +232,24 @@ function makePredicates(){
   return predicates;
 }
 
+/*
+ * 条件を選ぶ際、約数条件を別枠で扱う。
+ * 約数条件を候補に含める確率を10%にし、
+ * それ以外の条件は通常どおり候補にする。
+ */
 function makeAdvancedQuestion(){
-  const predicates=makePredicates();
+  const allPredicates=makePredicates();
+
+  const divisorPredicates=
+    allPredicates.filter(p=>p.type==="divisor");
+  const otherPredicates=
+    allPredicates.filter(p=>p.type!=="divisor");
+
+  const predicates=[
+    ...otherPredicates,
+    ...divisorPredicates.filter(()=>Math.random()<0.1)
+  ];
+
   const firstIndex=Math.floor(Math.random()*predicates.length);
   const first=predicates[firstIndex];
   const remaining=predicates.filter((p,i)=>i!==firstIndex);
@@ -338,6 +301,7 @@ function makeNormalQuestion(){
   do{
     p=randomItem(predicates);
     correct=[];
+
     for(let n=1;n<=10;n++){
       if(p.test(n))correct.push(n);
     }
@@ -373,9 +337,7 @@ function calculateQuestionPoints(question){
     return question.predicate.difficulty;
   }
 
-  let points=
-    question.first.difficulty+
-    question.second.difficulty;
+  let points=question.first.difficulty+question.second.difficulty;
 
   if(question.connector==="and")points+=500;
   points+=question.negationCount*500;
@@ -383,7 +345,7 @@ function calculateQuestionPoints(question){
   return points;
 }
 
-/* 得点横に加算ポイントを表示。高得点ほど文字を大きくする */
+/* 得点の横に加算ポイントを表示。高得点ほど大きく金色に */
 function showScoreGain(points){
   const gain=document.getElementById("scoreGain");
 
@@ -482,6 +444,7 @@ function updateTimer(){
   if(!active||questionLocked)return;
 
   const remaining=(deadline-Date.now())/1000;
+
   document.getElementById("timer").textContent=
     Math.max(0,Math.ceil(remaining));
 
