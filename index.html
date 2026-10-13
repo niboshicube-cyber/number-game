@@ -233,9 +233,9 @@ function makePredicates(){
 }
 
 /*
- * 条件を選ぶ際、約数条件を別枠で扱う。
- * 約数条件を候補に含める確率を10%にし、
- * それ以外の条件は通常どおり候補にする。
+ * 約数条件の候補率：
+ * 1問目0%、2問目1%、3問目2%……
+ * 10問目9%、11問目以降10%。
  */
 function makeAdvancedQuestion(){
   const allPredicates=makePredicates();
@@ -245,9 +245,11 @@ function makeAdvancedQuestion(){
   const otherPredicates=
     allPredicates.filter(p=>p.type!=="divisor");
 
+  const divisorChance=Math.min(0.1,0.01*(round-1));
+
   const predicates=[
     ...otherPredicates,
-    ...divisorPredicates.filter(()=>Math.random()<0.1)
+    ...divisorPredicates.filter(()=>Math.random()<divisorChance)
   ];
 
   const firstIndex=Math.floor(Math.random()*predicates.length);
