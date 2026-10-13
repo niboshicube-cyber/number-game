@@ -11,7 +11,7 @@ body{margin:0;padding:18px 14px;background:#101522;color:#f3f5fb;font-family:-ap
 h1{font-size:29px}
 .sub,.note{color:#aab4cc}
 .wrap{max-width:460px;margin:auto}
-button{font:inherit;cursor:pointer}
+button{font:inherit;cursor:pointer;touch-action:manipulation}
 .modes,.stats{display:flex;gap:9px;margin:18px 0}
 .mode,.stat{flex:1;padding:13px 5px;border:2px solid #46516b;border-radius:12px;background:#1a2234;color:white}
 .mode strong,.stat strong{display:block;font-size:21px;margin-bottom:5px}
@@ -32,6 +32,7 @@ button{font:inherit;cursor:pointer}
 .num.wrong{background:#792f3b;border-color:#ff7787}
 #message{min-height:27px;margin:12px 0;font-weight:bold}
 .note{font-size:12px;line-height:1.7;margin-top:14px}
+button:disabled{cursor:default;opacity:.8}
 </style>
 </head>
 <body>
@@ -42,14 +43,16 @@ button{font:inherit;cursor:pointer}
 <section id="menu" class="wrap">
   <div class="modes">
     <button class="mode selected" id="normalBtn" onclick="setMode('normal')">
-      <strong>初級</strong><small>素数・偶数・倍数など</small>
+      <strong>初級</strong>
+      <small>素数・偶数・倍数など</small>
     </button>
     <button class="mode" id="advancedBtn" onclick="setMode('advanced')">
-      <strong>上級</strong><small>かつ・または・ではない</small>
+      <strong>上級</strong>
+      <small>かつ・または・ではない</small>
     </button>
   </div>
   <button class="primary" onclick="startGame()">ゲームスタート</button>
-  <div class="note">1問ごとに制限時間が0.25秒ずつ短くなるよ。</div>
+  <div class="note">正解して次の問題に進むたびに、制限時間が0.25秒ずつ短くなるよ。</div>
 </section>
 
 <section id="game" class="wrap">
@@ -115,6 +118,7 @@ let active=false;
 let countId=null;
 let nextId=null;
 let startTime=0;
+let questionScore=0;
 
 function prime(n){
   if(n<2)return false;
@@ -126,7 +130,7 @@ function prime(n){
 
 function shuffle(a){
   for(let i=a.length-1;i>0;i--){
-    let j=Math.floor(Math.random()*(i+1));
+    const j=Math.floor(Math.random()*(i+1));
     [a[i],a[j]]=[a[j],a[i]];
   }
 }
@@ -134,22 +138,51 @@ function shuffle(a){
 function clearTimers(){
   clearInterval(countId);
   clearTimeout(nextId);
+  countId=null;
+  nextId=null;
 }
 
 function setMode(m){
+  if(active)return;
   mode=m;
   document.getElementById("normalBtn").classList.toggle("selected",m==="normal");
   document.getElementById("advancedBtn").classList.toggle("selected",m==="advanced");
 }
 
+function makePool(){
+  const base=[...(mode==="normal"?normalQuestions:advancedQuestions)];
+
+  // 約数の指示を追加。対象の数字は1〜200。
+  // 1〜10のマスに正解が必ず存在する問題だけを使う。
+  for(let i=0;i<10;i++){
+    const target=Math.floor(Math.random()*200)+1;
+    const matches=[];
+    for(let n=1;n<=10;n++){
+      if(target%n===0)matches.push(n);
+    }
+
+    if(matches.length>0&&matches.length<10){
+      base.push({
+        text:`${target}の約数`,
+        test:n=>target%n===0
+      });
+    }
+  }
+
+  shuffle(base);
+  return base;
+}
+
 function startGame(){
   clearTimers();
   score=0;
-  questionLimit=5;
   round=0;
   active=true;
-  pool=[...(mode==="normal"?normalQuestions:advancedQuestions)];
-  shuffle(pool);
+
+  // 初級は5秒、上級は10秒からスタート
+  questionLimit=mode==="advanced"?10:5;
+
+  pool=makePool();
 
   document.getElementById("menu").style.display="none";
   document.getElementById("result").style.display="none";
@@ -163,14 +196,12 @@ function nextQuestion(){
   if(!active)return;
   clearTimers();
 
-  if(!pool.length){
-    pool=[...(mode==="normal"?normalQuestions:advancedQuestions)];
-    shuffle(pool);
-  }
-
+  if(!pool.length)pool=makePool();
   q=pool.pop();
+
   time=questionLimit;
   round++;
+  questionScore=0;
 
   document.getElementById("time").textContent=String(Math.ceil(time));
   document.getElementById("round").textContent=String(round);
@@ -192,35 +223,37 @@ function nextQuestion(){
   startTime=Date.now();
 
   countId=setInterval(()=>{
+    if(!active)return;
+
     const elapsed=(Date.now()-startTime)/1000;
     time=Math.max(0,questionLimit-elapsed);
-
-    // 残り時間は整数で表示
     document.getElementById("time").textContent=String(Math.ceil(time));
 
     if(time<=0){
+      // 時間切れの瞬間に最後の判定をして終了
       endGame();
     }
-  },50);
+  },20);
 }
 
 function tap(b){
-  if(!active||b.classList.contains("correct"))return;
+  if(!active||b.classList.contains("correct")||b.disabled)return;
 
   const n=Number(b.textContent);
 
   if(q.test(n)){
     b.classList.add("correct");
+    b.disabled=true;
     score++;
+    questionScore++;
     document.getElementById("score").textContent=String(score);
 
     const buttons=[...document.querySelectorAll(".num")];
 
-    // 条件に合う数字をすべて選び終えたら次の問題へ
     if(buttons.every(x=>!q.test(Number(x.textContent))||x.classList.contains("correct"))){
-      clearInterval(countId);
+      clearTimers();
 
-      // 次の問題の制限時間を0.25秒短くする
+      // 次の問題は0.25秒短くする
       questionLimit=Math.max(0.25,Math.round((questionLimit-0.25)*100)/100);
 
       document.getElementById("message").textContent="正解！ 次の問題へ";
@@ -229,11 +262,14 @@ function tap(b){
         if(active)nextQuestion();
       },350);
     }else{
-      const remaining=buttons.filter(x=>q.test(Number(x.textContent))&&!x.classList.contains("correct")).length;
+      const remaining=buttons.filter(
+        x=>q.test(Number(x.textContent))&&!x.classList.contains("correct")
+      ).length;
       document.getElementById("message").textContent=`正解！ あと${remaining}個`;
     }
   }else{
     b.classList.add("wrong");
+    b.disabled=true;
     document.getElementById("message").textContent="違う！ 指示を確認しよう";
 
     setTimeout(()=>{
@@ -245,8 +281,24 @@ function tap(b){
 function endGame(){
   if(!active)return;
 
+  // 最終判定：現在の問題で選択済みの数字を確認する
+  // 正解済みの数字はすでにスコアに加算されている
+  const buttons=[...document.querySelectorAll(".num")];
+  let finalCorrect=0;
+
+  buttons.forEach(b=>{
+    const n=Number(b.textContent);
+    if(b.classList.contains("correct")&&q&&q.test(n)){
+      finalCorrect++;
+    }
+    b.disabled=true;
+  });
+
   active=false;
   clearTimers();
+
+  document.getElementById("time").textContent="0";
+  document.getElementById("message").textContent="時間切れ！ 最終判定完了";
 
   document.getElementById("resultText").textContent=
     `正解数：${score}個 / 挑戦した問題数：${round}問`;
