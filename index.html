@@ -223,6 +223,53 @@ button{font:inherit;cursor:pointer}
   font-size:13px;
   line-height:1.8;
 }
+
+/* 高得点獲得時の演出 */
+#jackpot{
+  position:fixed;
+  inset:0;
+  z-index:1000;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  flex-direction:column;
+  background:rgba(255,220,35,0.94);
+  color:#25200a;
+  pointer-events:none;
+  opacity:0;
+  visibility:hidden;
+}
+#jackpot.show{
+  visibility:visible;
+  animation:jackpotFlash 1.15s ease-out forwards;
+}
+#jackpotLabel{
+  font-size:clamp(25px,7vw,42px);
+  font-weight:1000;
+  letter-spacing:3px;
+  text-shadow:0 2px 0 rgba(255,255,255,.4);
+}
+#jackpotPoints{
+  font-size:clamp(48px,15vw,84px);
+  font-weight:1000;
+  line-height:1.2;
+  margin-top:10px;
+  text-shadow:0 4px 0 rgba(180,120,0,.22);
+}
+#jackpotMessage{
+  font-size:16px;
+  font-weight:800;
+  margin-top:10px;
+}
+@keyframes jackpotFlash{
+  0%{opacity:0;transform:scale(1.12)}
+  12%{opacity:1;transform:scale(1)}
+  22%{opacity:.88}
+  35%{opacity:1}
+  55%{opacity:.95}
+  100%{opacity:0;transform:scale(1)}
+}
+
 @media(max-width:360px){
   .container{width:94%}
   #numbers{gap:7px}
@@ -265,7 +312,7 @@ button{font:inherit;cursor:pointer}
     <div class="topbar">
       <span id="modeLabel">初級</span>
       <span>問題 <strong id="round">1</strong></span>
-      <span>正解数 <strong id="score">0</strong></span>
+      <span>得点 <strong id="score">0</strong></span>
       <span id="timer">5</span>
     </div>
 
@@ -294,6 +341,12 @@ button{font:inherit;cursor:pointer}
   </section>
 </div>
 
+<div id="jackpot" aria-hidden="true">
+  <div id="jackpotLabel">JACKPOT!!</div>
+  <div id="jackpotPoints">+35</div>
+  <div id="jackpotMessage">PERFECT LOGIC!</div>
+</div>
+
 <script>
 let mode="normal";
 let q=null;
@@ -309,6 +362,8 @@ let questionLocked=false;
 let currentCorrect=new Set();
 let selectedCorrect=new Set();
 let questionAnswered=false;
+let currentQuestionPoints=0;
+let jackpotId=null;
 
 /* iPhoneなど、振動に対応しない端末でも動くようにする */
 function vibrate(pattern){
@@ -346,11 +401,6 @@ function makePredicates(){
     type:"prime",
     label:"素数",
     test:n=>isPrime(n)
-  });
-  predicates.push({
-    type:"notPrime",
-    label:"素数ではない",
-    test:n=>!isPrime(n)
   });
   predicates.push({
     type:"square",
@@ -422,7 +472,6 @@ function makePredicates(){
     test:n=>N%n===0
   });
 
-  /* Nの倍数ではなく、Nで割り切れる数を1〜10から選ぶ条件 */
   return predicates;
 }
 
@@ -438,7 +487,7 @@ function randomItem(arr){
   return arr[Math.floor(Math.random()*arr.length)];
 }
 
-/* 同じ条件が2回出るのを避けて、2つの条件を自由に選ぶ */
+/* 上級：2つの条件、論理演算、否定をランダムに組み合わせる */
 function makeAdvancedQuestion(){
   const predicates=makePredicates();
   const firstIndex=Math.floor(Math.random()*predicates.length);
@@ -454,6 +503,10 @@ function makeAdvancedQuestion(){
   const testFirst=n=>negateFirst?!first.test(n):first.test(n);
   const testSecond=n=>negateSecond?!second.test(n):second.test(n);
 
+  /*
+    否定前の条件名を使うので、
+    「素数ではないではない」のような重複は発生しない。
+  */
   let labelFirst=first.label;
   let labelSecond=second.label;
 
@@ -476,6 +529,7 @@ function makeAdvancedQuestion(){
     first:first,
     second:second,
     connector:connector,
+    negationCount:Number(negateFirst)+Number(negateSecond),
     test:n=>{
       const a=testFirst(n);
       const b=testSecond(n);
@@ -518,8 +572,56 @@ function makeQuestion(){
   return question;
 }
 
+/*
+  問題全体の難易度で得点を決定。
+  「または」5点、「かつ」20点。
+  「ではない」1つにつき15点追加。
+*/
+function calculateQuestionPoints(question){
+  if(mode!=="advanced"){
+    return 5;
+  }
+
+  const basePoints=question.connector==="and"?20:5;
+  return basePoints+question.negationCount*15;
+}
+
+/* 高得点のとき、画面全体を黄色く光らせる */
+function showJackpot(points){
+  if(points<35) return;
+
+  const overlay=document.getElementById("jackpot");
+  const pointsLabel=document.getElementById("jackpotPoints");
+
+  if(jackpotId!==null){
+    clearTimeout(jackpotId);
+    jackpotId=null;
+  }
+
+  overlay.classList.remove("show");
+
+  /* 同じ演出を連続して再生できるようにする */
+  void overlay.offsetWidth;
+
+  pointsLabel.textContent=`+${points}`;
+  overlay.classList.add("show");
+
+  vibrate([40,30,60,30,100]);
+
+  jackpotId=setTimeout(()=>{
+    overlay.classList.remove("show");
+    jackpotId=null;
+  },1200);
+}
+
 function startGame(selectedMode){
   clearTimers();
+
+  if(jackpotId!==null){
+    clearTimeout(jackpotId);
+    jackpotId=null;
+  }
+  document.getElementById("jackpot").classList.remove("show");
 
   mode=selectedMode||mode;
   score=0;
@@ -552,6 +654,7 @@ function nextQuestion(){
 
   q=makeQuestion();
   currentCorrect=new Set(q.correct);
+  currentQuestionPoints=calculateQuestionPoints(q);
 
   round++;
   document.getElementById("round").textContent=round;
@@ -607,24 +710,36 @@ function tap(button,cell,n){
   if(q.test(n)){
     button.classList.add("correct");
     selectedCorrect.add(n);
-    score++;
 
-    document.getElementById("score").textContent=score;
-    document.getElementById("roundScore").textContent=selectedCorrect.size;
+    document.getElementById("roundScore").textContent=
+      selectedCorrect.size;
     document.getElementById("message").textContent="正解！";
 
     vibrate(15);
 
-    /* 正解となる数字をすべて選んだら次の問題へ */
+    /* 正解となる数字をすべて選んだら、問題の得点を加算 */
     if(selectedCorrect.size===currentCorrect.size){
       questionLocked=true;
       questionAnswered=true;
       clearTimers();
 
+      score+=currentQuestionPoints;
+      document.getElementById("score").textContent=score;
+
       vibrate([25,40,45]);
 
+      /* 35点以上なら高得点演出 */
+      showJackpot(currentQuestionPoints);
+
       questionLimit=Math.max(0.25,questionLimit-0.25);
-      document.getElementById("message").textContent="全問正解！ 次の問題へ…";
+
+      if(currentQuestionPoints>=35){
+        document.getElementById("message").textContent=
+          `完全正解！ +${currentQuestionPoints}点！！`;
+      }else{
+        document.getElementById("message").textContent=
+          `完全正解！ +${currentQuestionPoints}点`;
+      }
 
       nextId=setTimeout(()=>{
         if(active) nextQuestion();
@@ -667,11 +782,11 @@ function endGame(){
   document.getElementById("result").classList.remove("hidden");
 
   document.getElementById("resultScore").textContent=
-    `正解数：${score}個 / 挑戦した問題数：${round}問`;
+    `獲得得点：${score}点 / 挑戦した問題数：${round}問`;
 
   document.getElementById("resultNote").textContent=
     mode==="advanced"
-      ?"上級に挑戦お疲れさま！ 条件の組み合わせを見抜こう。"
+      ?"上級に挑戦お疲れさま！ 難しい条件の組み合わせを見抜こう。"
       :"挑戦お疲れさま！ 次はさらに記録を伸ばそう。";
 
   vibrate([80,50,120]);
@@ -681,6 +796,12 @@ function backToMenu(){
   active=false;
   questionLocked=true;
   clearTimers();
+
+  if(jackpotId!==null){
+    clearTimeout(jackpotId);
+    jackpotId=null;
+  }
+  document.getElementById("jackpot").classList.remove("show");
 
   try{
     if("vibrate" in navigator) navigator.vibrate(0);
