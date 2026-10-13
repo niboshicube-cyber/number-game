@@ -5,276 +5,75 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>NUMBER LOGIC</title>
-
 <style>
 *{box-sizing:border-box}
-body{
-  margin:0;
-  background:#10131c;
-  color:#f3f5fc;
-  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
-  text-align:center;
-  min-height:100vh;
-}
-.container{
-  width:min(520px,94%);
-  margin:0 auto;
-  padding:28px 0 40px;
-}
-h1{
-  font-size:32px;
-  letter-spacing:4px;
-  margin:12px 0 6px;
-}
-.subtitle{
-  color:#8d96ad;
-  font-size:12px;
-  letter-spacing:3px;
-  margin-bottom:28px;
-}
+body{margin:0;background:#10131c;color:#f3f5fc;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;text-align:center;min-height:100vh}
+.container{width:min(520px,94%);margin:0 auto;padding:28px 0 40px}
+h1{font-size:32px;letter-spacing:4px;margin:12px 0 6px}
+.subtitle{color:#8d96ad;font-size:12px;letter-spacing:3px;margin-bottom:28px}
 button{font:inherit;cursor:pointer}
-.mode-buttons{
-  display:flex;
-  gap:12px;
-  margin:24px 0;
-}
-.mode-button{
-  flex:1;
-  padding:17px 8px;
-  border:1px solid #414960;
-  border-radius:12px;
-  background:#1b2130;
-  color:#f3f5fc;
-  font-weight:700;
-  font-size:16px;
-}
+.mode-buttons{display:flex;gap:12px;margin:24px 0}
+.mode-button{flex:1;padding:17px 8px;border:1px solid #414960;border-radius:12px;background:#1b2130;color:#f3f5fc;font-weight:700;font-size:16px}
 .mode-button:hover{background:#28334a}
-.mode-button small{
-  display:block;
-  margin-top:7px;
-  font-size:11px;
-  color:#9da9c2;
-  font-weight:400;
-}
-.info{
-  color:#a7b0c6;
-  font-size:13px;
-  line-height:1.9;
-}
-.panel{
-  border:1px solid #323b51;
-  background:#181e2c;
-  border-radius:14px;
-  padding:17px 15px;
-  margin:17px 0;
-}
-.topbar{
-  display:flex;
-  justify-content:space-between;
-  gap:12px;
-  align-items:center;
-  font-size:13px;
-  color:#b7c0d5;
-}
-#timer{
-  color:#f6d365;
-  font-size:25px;
-  font-weight:800;
-  font-variant-numeric:tabular-nums;
-}
-.progress{
-  height:5px;
-  background:#30384b;
-  border-radius:10px;
-  overflow:hidden;
-  margin-top:10px;
-}
-#timebar{
-  width:100%;
-  height:100%;
-  background:#f6d365;
-  transition:width .08s linear;
-}
-.instruction{
-  border:1px solid #46516b;
-  border-radius:12px;
-  background:#141a27;
-  padding:20px 12px;
-  margin:20px 0;
-  line-height:2;
-  font-size:17px;
-  font-weight:650;
-  overflow-wrap:anywhere;
-}
-.logic{
-  display:inline-block;
-  padding:1px 7px;
-  margin:0 3px;
-  border:1px solid #7483a4;
-  border-radius:6px;
-  background:#29334a;
-  color:#d9e4ff;
-  font-size:.9em;
-  white-space:nowrap;
-}
-#numbers{
-  display:grid;
-  grid-template-columns:repeat(5,minmax(0,1fr));
-  gap:10px;
-  margin:22px 0;
-}
+.mode-button small{display:block;margin-top:7px;font-size:11px;color:#9da9c2;font-weight:400}
+.info{color:#a7b0c6;font-size:13px;line-height:1.9}
+.panel{border:1px solid #323b51;background:#181e2c;border-radius:14px;padding:17px 15px;margin:17px 0}
+.topbar{display:flex;justify-content:space-between;gap:8px;align-items:center;font-size:13px;color:#b7c0d5;flex-wrap:wrap}
+#timer{color:#f6d365;font-size:25px;font-weight:800;font-variant-numeric:tabular-nums}
+.progress{height:5px;background:#30384b;border-radius:10px;overflow:hidden;margin-top:10px}
+#timebar{width:100%;height:100%;background:#f6d365;transition:width .08s linear}
+.instruction{border:1px solid #46516b;border-radius:12px;background:#141a27;padding:20px 12px;margin:20px 0;line-height:2;font-size:17px;font-weight:650;overflow-wrap:anywhere}
+.logic{display:inline-block;padding:1px 7px;margin:0 3px;border:1px solid #7483a4;border-radius:6px;background:#29334a;color:#d9e4ff;font-size:.9em;white-space:nowrap}
+#numbers{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin:22px 0}
 .cell{position:relative;min-width:0}
-.num{
-  width:100%;
-  aspect-ratio:1;
-  border:1px solid #414b63;
-  border-radius:12px;
-  background:#20283a;
-  color:#f3f5fc;
-  font-size:24px;
-  font-weight:750;
-  transition:background .12s,border-color .12s,transform .12s;
-}
+.num{width:100%;aspect-ratio:1;border:1px solid #414b63;border-radius:12px;background:#20283a;color:#f3f5fc;font-size:24px;font-weight:750;transition:background .12s,border-color .12s,transform .12s}
 .num:active{transform:scale(.94)}
-.num.correct{
-  background:#1d654e;
-  border-color:#54d6a6;
-  color:#eafff6;
-}
-.num.wrong{
-  background:#742e3b;
-  border-color:#ff5364;
-  animation:shake .2s linear;
-}
+.num.correct{background:#1d654e;border-color:#54d6a6;color:#eafff6}
+.num.wrong{background:#742e3b;border-color:#ff5364;animation:shake .2s linear}
 .num:disabled{cursor:default}
-.penalty{
-  position:absolute;
-  z-index:2;
-  left:50%;
-  top:50%;
-  transform:translate(-50%,-50%);
-  font-size:19px;
-  font-weight:900;
-  color:#ff5364;
-  text-shadow:0 1px 5px #101522;
-  white-space:nowrap;
-  pointer-events:none;
-  animation:floatUp .85s ease-out forwards;
+.penalty{position:absolute;z-index:2;left:50%;top:50%;transform:translate(-50%,-50%);font-size:19px;font-weight:900;color:#ff5364;text-shadow:0 1px 5px #101522;white-space:nowrap;pointer-events:none;animation:floatUp .85s ease-out forwards}
+@keyframes floatUp{0%{opacity:0;translate:0 8px}20%{opacity:1}100%{opacity:0;translate:0 -35px}}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-3px)}75%{transform:translateX(3px)}}
+#message{min-height:24px;color:#b9c6e2;font-size:14px;margin:10px 0}
+
+/* 得点を大きく見やすく */
+.score-display{
+  border:1px solid #46516b;
+  border-radius:14px;
+  background:#181e2c;
+  padding:15px 10px 17px;
+  margin:18px 0;
 }
-@keyframes floatUp{
-  0%{opacity:0;translate:0 8px}
-  20%{opacity:1}
-  100%{opacity:0;translate:0 -35px}
-}
-@keyframes shake{
-  0%,100%{transform:translateX(0)}
-  25%{transform:translateX(-3px)}
-  75%{transform:translateX(3px)}
-}
-#message{
-  min-height:24px;
-  color:#b9c6e2;
-  font-size:14px;
-  margin:10px 0;
-}
-.scoreline{
-  display:flex;
-  justify-content:space-around;
-  gap:10px;
-  color:#aeb8ce;
-  font-size:13px;
-}
-.scoreline strong{
+.score-caption{color:#aeb8ce;font-size:13px;letter-spacing:2px}
+#score{
   display:block;
-  color:#f3f5fc;
-  font-size:22px;
-  margin-top:5px;
+  color:#f6d365;
+  font-size:clamp(38px,10vw,54px);
+  line-height:1.15;
+  font-weight:900;
+  font-variant-numeric:tabular-nums;
+  overflow-wrap:anywhere;
+  margin-top:6px;
 }
-.primary{
-  width:100%;
-  padding:15px;
-  border:0;
-  border-radius:11px;
-  background:#627cf6;
-  color:white;
-  font-size:16px;
-  font-weight:750;
-  margin-top:12px;
-}
+.score-unit{font-size:16px;color:#f6d365;margin-left:4px;font-weight:700}
+.scoreline{display:flex;justify-content:space-around;gap:10px;color:#aeb8ce;font-size:13px}
+.scoreline strong{display:block;color:#f3f5fc;font-size:22px;margin-top:5px}
+.primary{width:100%;padding:15px;border:0;border-radius:11px;background:#627cf6;color:white;font-size:16px;font-weight:750;margin-top:12px}
 .primary:hover{background:#7890ff}
-.secondary{
-  width:100%;
-  padding:13px;
-  border:1px solid #414960;
-  border-radius:11px;
-  background:#1b2130;
-  color:#dce3f5;
-  margin-top:10px;
-}
+.secondary{width:100%;padding:13px;border:1px solid #414960;border-radius:11px;background:#1b2130;color:#dce3f5;margin-top:10px}
 .hidden{display:none!important}
 #result h2{font-size:24px}
-#resultScore{
-  font-size:25px;
-  font-weight:800;
-  margin:25px 0;
-}
-.result-note{
-  color:#aab4ca;
-  font-size:13px;
-  line-height:1.8;
-}
-
-/* 控えめな高得点演出 */
-#jackpot{
-  position:fixed;
-  inset:0;
-  z-index:1000;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  flex-direction:column;
-  background:rgba(255,225,70,0.28);
-  color:#fff5b0;
-  text-shadow:0 2px 12px rgba(0,0,0,.65);
-  pointer-events:none;
-  opacity:0;
-  visibility:hidden;
-}
-#jackpot.show{
-  visibility:visible;
-  animation:jackpotFlash .75s ease-out forwards;
-}
-#jackpotLabel{
-  font-size:clamp(22px,6vw,32px);
-  font-weight:900;
-  letter-spacing:2px;
-}
-#jackpotPoints{
-  font-size:clamp(38px,11vw,58px);
-  font-weight:900;
-  line-height:1.2;
-  margin-top:6px;
-}
-#jackpotMessage{
-  font-size:13px;
-  font-weight:700;
-  margin-top:6px;
-}
-@keyframes jackpotFlash{
-  0%{opacity:0;transform:scale(1.03)}
-  20%{opacity:1;transform:scale(1)}
-  100%{opacity:0;transform:scale(1)}
-}
-
-@media(max-width:360px){
-  .container{width:94%}
-  #numbers{gap:7px}
-  .num{font-size:21px}
-  .instruction{font-size:15px}
-}
+#resultScore{font-size:clamp(23px,6vw,32px);font-weight:850;overflow-wrap:anywhere;margin:25px 0}
+.result-note{color:#aab4ca;font-size:13px;line-height:1.8}
+#jackpot{position:fixed;inset:0;z-index:1000;display:flex;align-items:center;justify-content:center;flex-direction:column;background:rgba(255,225,70,0.28);color:#fff5b0;text-shadow:0 2px 12px rgba(0,0,0,.65);pointer-events:none;opacity:0;visibility:hidden}
+#jackpot.show{visibility:visible;animation:jackpotFlash .75s ease-out forwards}
+#jackpotLabel{font-size:clamp(22px,6vw,32px);font-weight:900;letter-spacing:2px}
+#jackpotPoints{font-size:clamp(38px,11vw,58px);font-weight:900;line-height:1.2;margin-top:6px}
+#jackpotMessage{font-size:13px;font-weight:700;margin-top:6px}
+@keyframes jackpotFlash{0%{opacity:0;transform:scale(1.03)}20%{opacity:1;transform:scale(1)}100%{opacity:0;transform:scale(1)}}
+@media(max-width:360px){.container{width:94%}#numbers{gap:7px}.num{font-size:21px}.instruction{font-size:15px}}
 </style>
 </head>
-
 <body>
 <div class="container">
   <h1>NUMBER LOGIC</h1>
@@ -285,7 +84,6 @@ button{font:inherit;cursor:pointer}
       お題の条件に当てはまる数字をタップしよう。<br>
       間違えると残り時間が減るぞ。
     </p>
-
     <div class="mode-buttons">
       <button class="mode-button" onclick="startGame('normal')">
         初級
@@ -293,12 +91,11 @@ button{font:inherit;cursor:pointer}
       </button>
       <button class="mode-button" onclick="startGame('advanced')">
         上級
-        <small>制限時間 10秒・自由な組み合わせ</small>
+        <small>制限時間 10秒・条件の組み合わせ</small>
       </button>
     </div>
-
     <div class="panel info">
-      数字は1〜10。正解をタップすると得点。<br>
+      数字は1〜10。正解をすべてタップすると得点。<br>
       問題をクリアするたびに制限時間が短くなる。<br>
       誤答すると残り時間が1.5秒減る。
     </div>
@@ -308,14 +105,16 @@ button{font:inherit;cursor:pointer}
     <div class="topbar">
       <span id="modeLabel">初級</span>
       <span>問題 <strong id="round">1</strong></span>
-      <span>得点 <strong id="score">0</strong></span>
       <span id="timer">5</span>
     </div>
 
-    <div class="progress">
-      <div id="timebar"></div>
+    <div class="score-display">
+      <div class="score-caption">TOTAL SCORE</div>
+      <span id="score">0</span>
+      <span class="score-unit">点</span>
     </div>
 
+    <div class="progress"><div id="timebar"></div></div>
     <div id="instruction" class="instruction"></div>
     <div id="numbers"></div>
     <div id="message">当てはまる数字をすべて選ぼう！</div>
@@ -323,8 +122,8 @@ button{font:inherit;cursor:pointer}
     <div class="scoreline panel">
       <div>今回の正解数<strong id="roundScore">0</strong></div>
       <div>挑戦した問題数<strong id="roundCount">0</strong></div>
+      <div>今回の得点<strong id="questionPoints">0</strong></div>
     </div>
-
     <button class="secondary" onclick="backToMenu()">メニューに戻る</button>
   </section>
 
@@ -357,11 +156,9 @@ let wrongPenalty=1.5;
 let questionLocked=false;
 let currentCorrect=new Set();
 let selectedCorrect=new Set();
-let questionAnswered=false;
 let currentQuestionPoints=0;
 let jackpotId=null;
 
-/* iPhoneなど、振動に対応しない端末でも動くようにする */
 function vibrate(pattern){
   try{
     if("vibrate" in navigator) navigator.vibrate(pattern);
@@ -379,102 +176,10 @@ function clearTimers(){
   }
 }
 
-/* 1〜10の条件を作るための部品 */
-function makePredicates(){
-  const predicates=[];
-
-  predicates.push({
-    type:"even",
-    label:"偶数",
-    test:n=>n%2===0
-  });
-  predicates.push({
-    type:"odd",
-    label:"奇数",
-    test:n=>n%2!==0
-  });
-  predicates.push({
-    type:"prime",
-    label:"素数",
-    test:n=>isPrime(n)
-  });
-  predicates.push({
-    type:"square",
-    label:"平方数",
-    test:n=>Number.isInteger(Math.sqrt(n))
-  });
-  predicates.push({
-    type:"multiple3",
-    label:"3の倍数",
-    test:n=>n%3===0
-  });
-  predicates.push({
-    type:"multiple4",
-    label:"4の倍数",
-    test:n=>n%4===0
-  });
-  predicates.push({
-    type:"multiple5",
-    label:"5の倍数",
-    test:n=>n%5===0
-  });
-  predicates.push({
-    type:"multiple7",
-    label:"7の倍数",
-    test:n=>n%7===0
-  });
-  predicates.push({
-    type:"multiple2",
-    label:"2の倍数",
-    test:n=>n%2===0
-  });
-
-  predicates.push({
-    type:"le3",
-    label:"3以下",
-    test:n=>n<=3
-  });
-  predicates.push({
-    type:"le5",
-    label:"5以下",
-    test:n=>n<=5
-  });
-  predicates.push({
-    type:"le7",
-    label:"7以下",
-    test:n=>n<=7
-  });
-  predicates.push({
-    type:"ge4",
-    label:"4以上",
-    test:n=>n>=4
-  });
-  predicates.push({
-    type:"ge6",
-    label:"6以上",
-    test:n=>n>=6
-  });
-  predicates.push({
-    type:"ge8",
-    label:"8以上",
-    test:n=>n>=8
-  });
-
-  /* Nの約数。Nは問題ごとにランダムに変わる */
-  const N=Math.floor(Math.random()*200)+1;
-  predicates.push({
-    type:"divisor",
-    label:`${N}の約数`,
-    test:n=>N%n===0
-  });
-
-  return predicates;
-}
-
 function isPrime(n){
-  if(n<2) return false;
+  if(n<2)return false;
   for(let i=2;i*i<=n;i++){
-    if(n%i===0) return false;
+    if(n%i===0)return false;
   }
   return true;
 }
@@ -483,14 +188,112 @@ function randomItem(arr){
   return arr[Math.floor(Math.random()*arr.length)];
 }
 
-/* 上級：2つの条件、論理演算、否定をランダムに組み合わせる */
-function makeAdvancedQuestion(){
+/* 1〜10の範囲で条件を作る */
+function makePredicates(){
+  const predicates=[];
+
+  predicates.push({
+    type:"le3",label:"3以下",difficulty:500,
+    test:n=>n<=3
+  });
+  predicates.push({
+    type:"le5",label:"5以下",difficulty:550,
+    test:n=>n<=5
+  });
+  predicates.push({
+    type:"le7",label:"7以下",difficulty:600,
+    test:n=>n<=7
+  });
+  predicates.push({
+    type:"ge4",label:"4以上",difficulty:500,
+    test:n=>n>=4
+  });
+  predicates.push({
+    type:"ge6",label:"6以上",difficulty:550,
+    test:n=>n>=6
+  });
+  predicates.push({
+    type:"ge8",label:"8以上",difficulty:600,
+    test:n=>n>=8
+  });
+
+  /* 小さい倍数ほど難しい。1の倍数も上級の条件に含める */
+  for(const k of [1,2,3,4,5,6,7]){
+    predicates.push({
+      type:"multiple",
+      value:k,
+      label:`${k}の倍数`,
+      difficulty:700+(10-k)*30,
+      test:n=>n%k===0
+    });
+  }
+
+  predicates.push({
+    type:"square",label:"平方数",difficulty:1200,
+    test:n=>Number.isInteger(Math.sqrt(n))
+  });
+  predicates.push({
+    type:"prime",label:"素数",difficulty:1500,
+    test:n=>isPrime(n)
+  });
+
+  /*
+   * 1〜500から、1〜10の中に約数が3つ以上ある数を選ぶ。
+   * そのため、約数の条件が極端に簡単になりすぎない。
+   */
+  const eligible=[];
+  for(let N=1;N<=500;N++){
+    const divisors=[];
+    for(let n=1;n<=10;n++){
+      if(N%n===0)divisors.push(n);
+    }
+    if(divisors.length>=3){
+      eligible.push({N:N,divisors:divisors});
+    }
+  }
+
+  for(const item of eligible){
+    const N=item.N;
+    const divisorCount=item.divisors.length;
+
+    /*
+     * 約数の数が多いほど、またNが大きいほど高得点。
+     * 約数条件は素数よりも高い得点帯にする。
+     */
+    const difficulty=
+      1800+
+      Math.floor(N/500*500)+
+      (divisorCount-3)*200;
+
+    predicates.push({
+      type:"divisor",
+      value:N,
+      label:`${N}の約数`,
+      difficulty:difficulty,
+      test:n=>N%n===0
+    });
+  }
+
+  return predicates;
+}
+
+function randomPredicatePair(){
   const predicates=makePredicates();
+
+  /* 同じ条件が二重に出ないようにする */
   const firstIndex=Math.floor(Math.random()*predicates.length);
   const first=predicates[firstIndex];
-
   const remaining=predicates.filter((p,i)=>i!==firstIndex);
   const second=randomItem(remaining);
+
+  return {first:first,second:second};
+}
+
+/* 上級：2条件を「かつ」「または」「ではない」で組み合わせる */
+function makeAdvancedQuestion(){
+  const pair=randomPredicatePair();
+  const first=pair.first;
+  const second=pair.second;
 
   const connector=Math.random()<0.5?"and":"or";
   const negateFirst=Math.random()<0.25;
@@ -499,12 +302,11 @@ function makeAdvancedQuestion(){
   const testFirst=n=>negateFirst?!first.test(n):first.test(n);
   const testSecond=n=>negateSecond?!second.test(n):second.test(n);
 
-  /* 否定前の条件名を使い、否定表現の重複を防ぐ */
   let labelFirst=first.label;
   let labelSecond=second.label;
 
-  if(negateFirst) labelFirst=`${labelFirst}ではない`;
-  if(negateSecond) labelSecond=`${labelSecond}ではない`;
+  if(negateFirst)labelFirst+="ではない";
+  if(negateSecond)labelSecond+="ではない";
 
   const connectorLabel=connector==="and"?"かつ":"または";
   const correct=[];
@@ -513,7 +315,7 @@ function makeAdvancedQuestion(){
     const a=testFirst(n);
     const b=testSecond(n);
     const ok=connector==="and"?(a&&b):(a||b);
-    if(ok) correct.push(n);
+    if(ok)correct.push(n);
   }
 
   return {
@@ -531,19 +333,24 @@ function makeAdvancedQuestion(){
   };
 }
 
-/* 初級は一つの条件を中心に出題 */
+/* 初級：1条件のみ。全数字が正解になる条件は除外 */
 function makeNormalQuestion(){
   const predicates=makePredicates();
-  const p=randomItem(predicates);
-  const correct=[];
+  let p;
+  let correct=[];
 
-  for(let n=1;n<=10;n++){
-    if(p.test(n)) correct.push(n);
-  }
+  do{
+    p=randomItem(predicates);
+    correct=[];
+    for(let n=1;n<=10;n++){
+      if(p.test(n))correct.push(n);
+    }
+  }while(correct.length===0||correct.length===10);
 
   return {
     label:p.label,
     correct:correct,
+    predicate:p,
     test:p.test
   };
 }
@@ -551,33 +358,47 @@ function makeNormalQuestion(){
 function makeQuestion(){
   let question;
 
+  /* 1の倍数は単独では全数字が正解なので、上級の組み合わせで出題 */
   if(mode==="advanced"){
     question=makeAdvancedQuestion();
+
+    if(question.correct.length===0||question.correct.length===10){
+      return makeQuestion();
+    }
   }else{
     question=makeNormalQuestion();
-  }
-
-  /* 正解が0個または10個になる問題を避ける */
-  if(question.correct.length===0 || question.correct.length===10){
-    return makeQuestion();
   }
 
   return question;
 }
 
-/* 問題全体の難易度で得点を決定 */
-function calculateQuestionPoints(question){
-  if(mode!=="advanced"){
-    return 500;
-  }
-
-  const basePoints=question.connector==="and"?2000:500;
-  return basePoints+question.negationCount*1500;
+/* 条件ごとの難しさを得点に反映 */
+function calculatePredicatePoints(predicate){
+  return predicate.difficulty;
 }
 
-/* 3,500点以上のとき、控えめな高得点演出 */
+function calculateQuestionPoints(question){
+  if(mode!=="advanced"){
+    return calculatePredicatePoints(question.predicate);
+  }
+
+  let points=
+    calculatePredicatePoints(question.first)+
+    calculatePredicatePoints(question.second);
+
+  /* かつはまたはより難しい */
+  if(question.connector==="and"){
+    points+=500;
+  }
+
+  /* 否定があるほど難しい */
+  points+=question.negationCount*500;
+
+  return points;
+}
+
 function showJackpot(points){
-  if(points<3500) return;
+  if(points<3500)return;
 
   const overlay=document.getElementById("jackpot");
   const pointsLabel=document.getElementById("jackpotPoints");
@@ -592,7 +413,6 @@ function showJackpot(points){
 
   pointsLabel.textContent=`+${points.toLocaleString("ja-JP")}`;
   overlay.classList.add("show");
-
   vibrate([25,30,45]);
 
   jackpotId=setTimeout(()=>{
@@ -632,11 +452,10 @@ function startGame(selectedMode){
 }
 
 function nextQuestion(){
-  if(!active) return;
+  if(!active)return;
 
   clearTimers();
   questionLocked=false;
-  questionAnswered=false;
   selectedCorrect=new Set();
 
   q=makeQuestion();
@@ -648,6 +467,8 @@ function nextQuestion(){
   document.getElementById("instruction").innerHTML=q.label;
   document.getElementById("message").textContent=
     "当てはまる数字をすべて選ぼう！";
+  document.getElementById("questionPoints").textContent=
+    currentQuestionPoints.toLocaleString("ja-JP");
 
   const board=document.getElementById("numbers");
   board.innerHTML="";
@@ -675,22 +496,20 @@ function nextQuestion(){
 }
 
 function updateTimer(){
-  if(!active||questionLocked) return;
+  if(!active||questionLocked)return;
 
   const remaining=(deadline-Date.now())/1000;
-  const display=Math.max(0,Math.ceil(remaining));
+  document.getElementById("timer").textContent=
+    Math.max(0,Math.ceil(remaining));
 
-  document.getElementById("timer").textContent=display;
   document.getElementById("timebar").style.width=
     Math.max(0,Math.min(100,remaining/questionLimit*100))+"%";
 
-  if(remaining<=0){
-    endGame();
-  }
+  if(remaining<=0)endGame();
 }
 
 function tap(button,cell,n){
-  if(!active||questionLocked||button.disabled) return;
+  if(!active||questionLocked||button.disabled)return;
 
   button.disabled=true;
 
@@ -704,10 +523,8 @@ function tap(button,cell,n){
 
     vibrate(15);
 
-    /* 正解となる数字をすべて選んだら、問題の得点を加算 */
     if(selectedCorrect.size===currentCorrect.size){
       questionLocked=true;
-      questionAnswered=true;
       clearTimers();
 
       score+=currentQuestionPoints;
@@ -717,18 +534,17 @@ function tap(button,cell,n){
       vibrate([25,40,45]);
       showJackpot(currentQuestionPoints);
 
-      questionLimit=Math.max(0.25,questionLimit-0.25);
-
       document.getElementById("message").textContent=
         `完全正解！ +${currentQuestionPoints.toLocaleString("ja-JP")}点`;
 
+      questionLimit=Math.max(0.25,questionLimit-0.25);
+
       nextId=setTimeout(()=>{
-        if(active) nextQuestion();
+        if(active)nextQuestion();
       },350);
     }
   }else{
     button.classList.add("wrong");
-
     deadline-=wrongPenalty*1000;
 
     const penalty=document.createElement("span");
@@ -737,7 +553,7 @@ function tap(button,cell,n){
     cell.appendChild(penalty);
 
     setTimeout(()=>{
-      if(penalty.parentNode) penalty.remove();
+      if(penalty.parentNode)penalty.remove();
     },900);
 
     document.getElementById("message").textContent="誤答！ −1.5秒";
@@ -747,7 +563,7 @@ function tap(button,cell,n){
 }
 
 function endGame(){
-  if(!active) return;
+  if(!active)return;
 
   active=false;
   questionLocked=true;
@@ -782,10 +598,11 @@ function backToMenu(){
     clearTimeout(jackpotId);
     jackpotId=null;
   }
+
   document.getElementById("jackpot").classList.remove("show");
 
   try{
-    if("vibrate" in navigator) navigator.vibrate(0);
+    if("vibrate" in navigator)navigator.vibrate(0);
   }catch(e){}
 
   document.getElementById("game").classList.add("hidden");
