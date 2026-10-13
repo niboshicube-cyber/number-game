@@ -3,471 +3,265 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Number Logic</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NUMBER LOGIC</title>
 <style>
-  * { box-sizing: border-box; }
-
-  body {
-    margin: 0;
-    padding: 20px 14px;
-    background: #101522;
-    color: #f3f5fb;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-    text-align: center;
-  }
-
-  h1 { margin: 4px 0 8px; font-size: 29px; }
-  .subtitle { color: #aab4cc; margin-bottom: 22px; }
-
-  button { font: inherit; cursor: pointer; }
-
-  .mode-area {
-    display: flex;
-    gap: 12px;
-    max-width: 440px;
-    margin: 20px auto;
-  }
-
-  .mode-button {
-    flex: 1;
-    padding: 17px 8px;
-    border: 2px solid #46516b;
-    border-radius: 12px;
-    background: #1a2234;
-    color: white;
-  }
-
-  .mode-button strong {
-    display: block;
-    font-size: 20px;
-    margin-bottom: 6px;
-  }
-
-  .mode-button span { font-size: 12px; color: #bdc7dc; }
-
-  .mode-button.selected {
-    border-color: #71d7ff;
-    background: #18364a;
-  }
-
-  #game { display: none; max-width: 460px; margin: 0 auto; }
-
-  .top-bar {
-    display: flex;
-    justify-content: space-between;
-    gap: 8px;
-    margin: 18px 0;
-  }
-
-  .stat {
-    flex: 1;
-    padding: 10px 4px;
-    background: #1a2234;
-    border: 1px solid #35415a;
-    border-radius: 10px;
-    font-size: 14px;
-  }
-
-  .stat strong {
-    display: block;
-    font-size: 23px;
-    margin-top: 4px;
-  }
-
-  .instruction-box {
-    padding: 17px 10px;
-    margin: 16px 0;
-    min-height: 72px;
-    border: 2px solid #7f91b7;
-    border-radius: 12px;
-    background: #202b43;
-  }
-
-  .instruction-label {
-    color: #aebcda;
-    font-size: 12px;
-    margin-bottom: 8px;
-  }
-
-  #instruction {
-    font-size: 20px;
-    font-weight: bold;
-    line-height: 1.7;
-  }
-
-  .logic-word {
-    display: inline-block;
-    padding: 1px 7px;
-    margin: 0 2px;
-    border: 1px solid #ffc66d;
-    border-radius: 5px;
-    background: #49391f;
-    color: #ffdb99;
-  }
-
-  #numbers {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 9px;
-    margin: 18px 0;
-  }
-
-  .number-button {
-    min-width: 0;
-    aspect-ratio: 1 / 1;
-    border: 1px solid #465573;
-    border-radius: 12px;
-    background: #202a40;
-    color: white;
-    font-size: 27px;
-    font-weight: bold;
-    transition: background 0.08s;
-    -webkit-tap-highlight-color: transparent;
-  }
-
-  .number-button:active { transform: scale(0.96); }
-
-  .number-button.correct {
-    background: #17684d;
-    border-color: #58e0a5;
-  }
-
-  .number-button.wrong {
-    background: #792f3b;
-    border-color: #ff7787;
-  }
-
-  #message {
-    min-height: 28px;
-    margin: 12px 0;
-    color: #c8d4ee;
-    font-weight: bold;
-  }
-
-  .main-button {
-    padding: 13px 25px;
-    border: none;
-    border-radius: 10px;
-    background: #71d7ff;
-    color: #101522;
-    font-weight: bold;
-  }
-
-  .secondary-button {
-    margin-top: 12px;
-    padding: 10px 18px;
-    border: 1px solid #53617e;
-    border-radius: 9px;
-    background: transparent;
-    color: #e0e7f7;
-  }
-
-  .note {
-    color: #9daac4;
-    font-size: 12px;
-    line-height: 1.7;
-    margin-top: 14px;
-  }
-
-  #result { display: none; margin: 20px 0; }
+*{box-sizing:border-box}
+body{margin:0;padding:18px 14px;background:#101522;color:#f3f5fb;font-family:-apple-system,BlinkMacSystemFont,sans-serif;text-align:center}
+h1{font-size:29px}
+.sub,.note{color:#aab4cc}
+.wrap{max-width:460px;margin:auto}
+button{font:inherit;cursor:pointer}
+.modes,.stats{display:flex;gap:9px;margin:18px 0}
+.mode,.stat{flex:1;padding:13px 5px;border:2px solid #46516b;border-radius:12px;background:#1a2234;color:white}
+.mode strong,.stat strong{display:block;font-size:21px;margin-bottom:5px}
+.mode small{color:#bdc7dc}
+.selected{border-color:#71d7ff;background:#18364a}
+.primary{padding:13px 24px;border:0;border-radius:10px;background:#71d7ff;color:#101522;font-weight:bold}
+.secondary{margin:12px;padding:10px 18px;border:1px solid #53617e;border-radius:9px;background:transparent;color:#e0e7f7}
+#game,#result{display:none}
+.stat{font-size:12px;color:#bdc7dc;border-width:1px}
+.stat strong{color:white;font-size:22px;margin:5px 0 0}
+.instruction{padding:15px 10px;margin:15px 0;border:2px solid #7f91b7;border-radius:12px;background:#202b43}
+.label{font-size:12px;color:#aebcda;margin-bottom:7px}
+#prompt{font-size:20px;font-weight:bold;line-height:1.7}
+.logic{display:inline-block;padding:1px 6px;border:1px solid #ffc66d;border-radius:5px;background:#49391f;color:#ffdb99}
+#numbers{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;margin:16px 0}
+.num{aspect-ratio:1;border:1px solid #465573;border-radius:12px;background:#202a40;color:white;font-size:27px;font-weight:bold}
+.num.correct{background:#17684d;border-color:#58e0a5}
+.num.wrong{background:#792f3b;border-color:#ff7787}
+#message{min-height:27px;margin:12px 0;font-weight:bold}
+.note{font-size:12px;line-height:1.7;margin-top:14px}
 </style>
 </head>
 <body>
 
 <h1>NUMBER LOGIC</h1>
-<div class="subtitle">数字を見極めて、正解をタップ！</div>
+<div class="sub">条件に合う数字をすべてタップ！</div>
 
-<div id="modeArea">
-  <div class="mode-area">
-    <button class="mode-button selected" id="normalMode"
-      onclick="selectMode('normal')">
-      <strong>初級</strong>
-      <span>素数・偶数・倍数など</span>
+<section id="menu" class="wrap">
+  <div class="modes">
+    <button class="mode selected" id="normalBtn" onclick="setMode('normal')">
+      <strong>初級</strong><small>素数・偶数・倍数など</small>
     </button>
-    <button class="mode-button" id="advancedMode"
-      onclick="selectMode('advanced')">
-      <strong>上級</strong>
-      <span>かつ・または・ではない</span>
+    <button class="mode" id="advancedBtn" onclick="setMode('advanced')">
+      <strong>上級</strong><small>かつ・または・ではない</small>
     </button>
   </div>
-  <button class="main-button" onclick="startGame()">ゲームスタート</button>
-  <div class="note">
-    初級は数の基本的な性質、上級は複数の条件を組み合わせた問題に挑戦！
-  </div>
-</div>
+  <button class="primary" onclick="startGame()">ゲームスタート</button>
+  <div class="note">1問ごとに制限時間が0.25秒ずつ短くなるよ。</div>
+</section>
 
-<div id="game">
-  <div class="top-bar">
+<section id="game" class="wrap">
+  <div class="stats">
     <div class="stat">残り時間<strong id="time">5</strong></div>
     <div class="stat">正解数<strong id="score">0</strong></div>
-    <div class="stat">数字の更新<strong id="speed">1.00秒</strong></div>
+    <div class="stat">問題数<strong id="round">1</strong></div>
   </div>
 
-  <div class="instruction-box">
-    <div class="instruction-label">今回の指示</div>
-    <div id="instruction"></div>
+  <div class="instruction">
+    <div class="label">今回の指示</div>
+    <div id="prompt"></div>
   </div>
 
   <div id="numbers"></div>
   <div id="message">条件に合う数字をすべてタップ！</div>
-  <button class="secondary-button" onclick="backToMenu()">モード選択に戻る</button>
-</div>
+  <button class="secondary" onclick="backToMenu()">モード選択に戻る</button>
+</section>
 
-<div id="result">
-  <h2>終了！</h2>
+<section id="result" class="wrap">
+  <h2>ゲーム終了！</h2>
   <p id="resultText"></p>
-  <button class="main-button" onclick="startGame()">もう一度プレイ</button>
+  <button class="primary" onclick="startGame()">もう一度プレイ</button>
   <br>
-  <button class="secondary-button" onclick="backToMenu()">モード選択に戻る</button>
-</div>
+  <button class="secondary" onclick="backToMenu()">モード選択に戻る</button>
+</section>
 
 <script>
 const normalQuestions = [
-  { text: "素数", test: n => isPrime(n) },
-  { text: "偶数", test: n => n % 2 === 0 },
-  { text: "奇数", test: n => n % 2 !== 0 },
-  { text: "3の倍数", test: n => n % 3 === 0 },
-  { text: "4の倍数", test: n => n % 4 === 0 },
-  { text: "5の倍数", test: n => n % 5 === 0 },
-  { text: "6の約数", test: n => 6 % n === 0 },
-  { text: "8以上の数", test: n => n >= 8 },
-  { text: "5未満の数", test: n => n < 5 },
-  { text: "10の約数", test: n => 10 % n === 0 }
+  {text:"素数",test:n=>prime(n)},
+  {text:"偶数",test:n=>n%2===0},
+  {text:"奇数",test:n=>n%2!==0},
+  {text:"3の倍数",test:n=>n%3===0},
+  {text:"4の倍数",test:n=>n%4===0},
+  {text:"5の倍数",test:n=>n%5===0},
+  {text:"6の約数",test:n=>6%n===0},
+  {text:"8以上の数",test:n=>n>=8},
+  {text:"5未満の数",test:n=>n<5},
+  {text:"10の約数",test:n=>10%n===0}
 ];
 
 const advancedQuestions = [
-  {
-    text: `素数 <span class="logic-word">かつ</span> 偶数`,
-    test: n => isPrime(n) && n % 2 === 0
-  },
-  {
-    text: `3の倍数 <span class="logic-word">または</span> 5の倍数`,
-    test: n => n % 3 === 0 || n % 5 === 0
-  },
-  {
-    text: `偶数 <span class="logic-word">ではない</span>`,
-    test: n => n % 2 !== 0
-  },
-  {
-    text: `4の倍数 <span class="logic-word">かつ</span> 8未満`,
-    test: n => n % 4 === 0 && n < 8
-  },
-  {
-    text: `素数 <span class="logic-word">または</span> 1`,
-    test: n => isPrime(n) || n === 1
-  },
-  {
-    text: `3の倍数 <span class="logic-word">でも</span> 5の倍数 <span class="logic-word">でもない</span>`,
-    test: n => n % 3 !== 0 && n % 5 !== 0
-  },
-  {
-    text: `2の倍数 <span class="logic-word">かつ</span> 3の倍数`,
-    test: n => n % 2 === 0 && n % 3 === 0
-  },
-  {
-    text: `6の約数 <span class="logic-word">または</span> 8の約数`,
-    test: n => 6 % n === 0 || 8 % n === 0
-  },
-  {
-    text: `奇数 <span class="logic-word">かつ</span> 5以上`,
-    test: n => n % 2 !== 0 && n >= 5
-  },
-  {
-    text: `素数 <span class="logic-word">ではない</span> <span class="logic-word">かつ</span> 3以上`,
-    test: n => !isPrime(n) && n >= 3
-  }
+  {text:'素数 <span class="logic">かつ</span> 偶数',test:n=>prime(n)&&n%2===0},
+  {text:'3の倍数 <span class="logic">または</span> 5の倍数',test:n=>n%3===0||n%5===0},
+  {text:'偶数 <span class="logic">ではない</span>',test:n=>n%2!==0},
+  {text:'4の倍数 <span class="logic">かつ</span> 8未満',test:n=>n%4===0&&n<8},
+  {text:'素数 <span class="logic">または</span> 1',test:n=>prime(n)||n===1},
+  {text:'3の倍数 <span class="logic">でも</span> 5の倍数 <span class="logic">でもない</span>',test:n=>n%3!==0&&n%5!==0},
+  {text:'2の倍数 <span class="logic">かつ</span> 3の倍数',test:n=>n%2===0&&n%3===0},
+  {text:'6の約数 <span class="logic">または</span> 8の約数',test:n=>6%n===0||8%n===0},
+  {text:'奇数 <span class="logic">かつ</span> 5以上',test:n=>n%2!==0&&n>=5},
+  {text:'素数 <span class="logic">ではない</span> <span class="logic">かつ</span> 3以上',test:n=>!prime(n)&&n>=3}
 ];
 
-let mode = "normal";
-let question = null;
-let score = 0;
-let timeLeft = 5;
-let intervalMs = 1000;
-let countdownId = null;
-let numberId = null;
-let questionId = null;
-let gameActive = false;
-let answered = new Set();
-let requiredNumbers = new Set();
-let questionPool = [];
+let mode="normal";
+let pool=[];
+let q=null;
+let score=0;
+let time=5;
+let questionLimit=5;
+let round=0;
+let active=false;
+let countId=null;
+let nextId=null;
+let startTime=0;
 
-function isPrime(n) {
-  if (n < 2) return false;
-  for (let i = 2; i * i <= n; i++) {
-    if (n % i === 0) return false;
+function prime(n){
+  if(n<2)return false;
+  for(let i=2;i*i<=n;i++){
+    if(n%i===0)return false;
   }
   return true;
 }
 
-function selectMode(selected) {
-  mode = selected;
-  document.getElementById("normalMode").classList.toggle(
-    "selected", mode === "normal"
-  );
-  document.getElementById("advancedMode").classList.toggle(
-    "selected", mode === "advanced"
-  );
+function shuffle(a){
+  for(let i=a.length-1;i>0;i--){
+    let j=Math.floor(Math.random()*(i+1));
+    [a[i],a[j]]=[a[j],a[i]];
+  }
 }
 
-function startGame() {
-  clearAllTimers();
-  score = 0;
-  intervalMs = 1000;
-  gameActive = true;
+function clearTimers(){
+  clearInterval(countId);
+  clearTimeout(nextId);
+}
 
-  questionPool = [...(mode === "normal" ? normalQuestions : advancedQuestions)];
-  shuffle(questionPool);
+function setMode(m){
+  mode=m;
+  document.getElementById("normalBtn").classList.toggle("selected",m==="normal");
+  document.getElementById("advancedBtn").classList.toggle("selected",m==="advanced");
+}
 
-  document.getElementById("modeArea").style.display = "none";
-  document.getElementById("result").style.display = "none";
-  document.getElementById("game").style.display = "block";
-  document.getElementById("score").textContent = score;
+function startGame(){
+  clearTimers();
+  score=0;
+  questionLimit=5;
+  round=0;
+  active=true;
+  pool=[...(mode==="normal"?normalQuestions:advancedQuestions)];
+  shuffle(pool);
+
+  document.getElementById("menu").style.display="none";
+  document.getElementById("result").style.display="none";
+  document.getElementById("game").style.display="block";
+  document.getElementById("score").textContent="0";
 
   nextQuestion();
 }
 
-function nextQuestion() {
-  if (!gameActive) return;
+function nextQuestion(){
+  if(!active)return;
+  clearTimers();
 
-  clearInterval(countdownId);
-  clearInterval(numberId);
-  clearTimeout(questionId);
-
-  if (questionPool.length === 0) {
-    questionPool = [...(mode === "normal" ? normalQuestions : advancedQuestions)];
-    shuffle(questionPool);
+  if(!pool.length){
+    pool=[...(mode==="normal"?normalQuestions:advancedQuestions)];
+    shuffle(pool);
   }
 
-  question = questionPool.pop();
-  answered = new Set();
-  timeLeft = 5;
+  q=pool.pop();
+  time=questionLimit;
+  round++;
 
-  document.getElementById("time").textContent = timeLeft;
-  document.getElementById("speed").textContent =
-    (intervalMs / 1000).toFixed(2) + "秒";
-  document.getElementById("instruction").innerHTML = question.text;
-  document.getElementById("message").textContent =
-    "条件に合う数字をすべてタップ！";
+  document.getElementById("time").textContent=String(Math.ceil(time));
+  document.getElementById("round").textContent=String(round);
+  document.getElementById("prompt").innerHTML=q.text;
+  document.getElementById("message").textContent="条件に合う数字をすべてタップ！";
 
-  createNumbers();
-  updateRequiredNumbers();
+  const area=document.getElementById("numbers");
+  area.innerHTML="";
 
-  countdownId = setInterval(() => {
-    timeLeft -= 1;
-    document.getElementById("time").textContent = Math.max(0, timeLeft);
-    if (timeLeft <= 0) endQuestion(false);
-  }, 1000);
-
-  numberId = setInterval(() => {
-    if (!gameActive) return;
-    changeNumbers();
-  }, intervalMs);
-
-  questionId = setTimeout(() => endQuestion(false), 5000);
-}
-
-function createNumbers() {
-  const area = document.getElementById("numbers");
-  area.innerHTML = "";
-
-  for (let i = 0; i < 16; i++) {
-    const button = document.createElement("button");
-    button.className = "number-button";
-    button.addEventListener("click", () => tapNumber(button));
-    area.appendChild(button);
+  // 数字のマスは毎回1〜10を同じ順番で配置
+  for(let n=1;n<=10;n++){
+    const b=document.createElement("button");
+    b.className="num";
+    b.textContent=n;
+    b.onclick=()=>tap(b);
+    area.appendChild(b);
   }
+
+  startTime=Date.now();
+
+  countId=setInterval(()=>{
+    const elapsed=(Date.now()-startTime)/1000;
+    time=Math.max(0,questionLimit-elapsed);
+
+    // 残り時間は整数で表示
+    document.getElementById("time").textContent=String(Math.ceil(time));
+
+    if(time<=0){
+      endGame();
+    }
+  },50);
 }
 
-function changeNumbers() {
-  const buttons = [...document.querySelectorAll(".number-button")];
-  buttons.forEach(button => {
-    button.textContent = String(1 + Math.floor(Math.random() * 20));
-    button.classList.remove("correct", "wrong");
-  });
-  answered.clear();
-  updateRequiredNumbers();
-}
+function tap(b){
+  if(!active||b.classList.contains("correct"))return;
 
-function updateRequiredNumbers() {
-  requiredNumbers = new Set();
-  document.querySelectorAll(".number-button").forEach(button => {
-    const n = Number(button.textContent);
-    if (question.test(n)) requiredNumbers.add(button);
-  });
-}
+  const n=Number(b.textContent);
 
-function tapNumber(button) {
-  if (!gameActive || button.classList.contains("correct")) return;
-
-  const n = Number(button.textContent);
-  if (question.test(n)) {
-    button.classList.add("correct");
-    answered.add(button);
+  if(q.test(n)){
+    b.classList.add("correct");
     score++;
-    document.getElementById("score").textContent = score;
+    document.getElementById("score").textContent=String(score);
 
-    const allCorrect = [...document.querySelectorAll(".number-button")]
-      .every(b => !question.test(Number(b.textContent)) || b.classList.contains("correct"));
+    const buttons=[...document.querySelectorAll(".num")];
 
-    if (allCorrect) endQuestion(true);
-  } else {
-    button.classList.add("wrong");
-    document.getElementById("message").textContent = "違う！条件を確認しよう";
-    setTimeout(() => button.classList.remove("wrong"), 250);
+    // 条件に合う数字をすべて選び終えたら次の問題へ
+    if(buttons.every(x=>!q.test(Number(x.textContent))||x.classList.contains("correct"))){
+      clearInterval(countId);
+
+      // 次の問題の制限時間を0.25秒短くする
+      questionLimit=Math.max(0.25,Math.round((questionLimit-0.25)*100)/100);
+
+      document.getElementById("message").textContent="正解！ 次の問題へ";
+
+      nextId=setTimeout(()=>{
+        if(active)nextQuestion();
+      },350);
+    }else{
+      const remaining=buttons.filter(x=>q.test(Number(x.textContent))&&!x.classList.contains("correct")).length;
+      document.getElementById("message").textContent=`正解！ あと${remaining}個`;
+    }
+  }else{
+    b.classList.add("wrong");
+    document.getElementById("message").textContent="違う！ 指示を確認しよう";
+
+    setTimeout(()=>{
+      b.classList.remove("wrong");
+    },220);
   }
 }
 
-function endQuestion(wasCorrect) {
-  if (!gameActive) return;
+function endGame(){
+  if(!active)return;
 
-  clearInterval(countdownId);
-  clearInterval(numberId);
-  clearTimeout(questionId);
+  active=false;
+  clearTimers();
 
-  if (wasCorrect) {
-    document.getElementById("message").textContent = "正解！ 次の問題へ";
-  } else {
-    document.getElementById("message").textContent = "時間切れ！ 次の問題へ";
-  }
+  document.getElementById("resultText").textContent=
+    `正解数：${score}個 / 挑戦した問題数：${round}問`;
 
-  // 1問終わるたびに数字の更新を速くする
-  intervalMs = Math.max(250, intervalMs - 50);
-
-  questionId = setTimeout(() => {
-    if (gameActive) nextQuestion();
-  }, 350);
+  document.getElementById("game").style.display="none";
+  document.getElementById("result").style.display="block";
 }
 
-function finishGame() {
-  gameActive = false;
-  clearAllTimers();
-  document.getElementById("game").style.display = "none";
-  document.getElementById("result").style.display = "block";
-  document.getElementById("resultText").textContent =
-    "正解数：" + score + "　／　最後の更新間隔：" +
-    (intervalMs / 1000).toFixed(2) + "秒";
-}
+function backToMenu(){
+  active=false;
+  clearTimers();
 
-function backToMenu() {
-  gameActive = false;
-  clearAllTimers();
-  document.getElementById("game").style.display = "none";
-  document.getElementById("result").style.display = "none";
-  document.getElementById("modeArea").style.display = "block";
-}
-
-function clearAllTimers() {
-  clearInterval(countdownId);
-  clearInterval(numberId);
-  clearTimeout(questionId);
-}
-
-function shuffle(array) {
-  for (let i = array.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [array[i], array[j]] = [array[j], array[i]];
-  }
+  document.getElementById("game").style.display="none";
+  document.getElementById("result").style.display="none";
+  document.getElementById("menu").style.display="block";
 }
 </script>
 </body>
