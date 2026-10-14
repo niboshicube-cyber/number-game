@@ -177,11 +177,6 @@ button{font:inherit;cursor:pointer}
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-/*
-  ここに自分のSupabase情報を設定する。
-  Project URLとPublishable keyを使う。
-  service_role / secret keyは絶対に入れない。
-*/
 const SUPABASE_URL = "https://lwjghracldlocggxsoqo.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_DhwSO4NMBnFduSHzsMwq3Q_z-9GtSVO";
 
@@ -204,10 +199,7 @@ function initSupabase(){
     return;
   }
   try{
-    supabaseClient = window.supabase.createClient(
-      SUPABASE_URL,
-      SUPABASE_PUBLISHABLE_KEY
-    );
+    supabaseClient = window.supabase.createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY);
     loadSavedPlayer();
   }catch(error){
     console.error(error);
@@ -338,11 +330,13 @@ async function openRanking(selectedMode){
     return;
   }
 
+  const databaseMode=rankingMode==="normal"?"beginner":"advanced";
+
   try{
     const {data,error}=await supabaseClient
       .from("best_scores")
       .select("player_id, mode, best_score, players(nickname)")
-      .eq("mode",rankingMode)
+      .eq("mode",databaseMode)
       .order("best_score",{ascending:false})
       .limit(50);
 
@@ -528,7 +522,15 @@ function getCorrect(test){
 }
 
 function makeNormalQuestion(){
-  const predicates=makePredicates();
+  const all=makePredicates();
+  const questionNumber=round+1;
+  const divisorChance=Math.min(0.1,0.01*(questionNumber-1));
+
+  const predicates=all.filter(p=>{
+    if(p.type!=="divisor")return true;
+    return Math.random()<divisorChance;
+  });
+
   let p,correct;
   do{
     p=randomItem(predicates);
