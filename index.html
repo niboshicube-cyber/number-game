@@ -53,6 +53,15 @@ button{font:inherit;cursor:pointer}
 #resultScore{font-size:clamp(23px,6vw,32px);font-weight:850;overflow-wrap:anywhere;margin:25px 0}
 .result-note{color:#aab4ca;font-size:13px;line-height:1.8}
 .version-label{display:inline-block;color:#f6d365;font-size:12px;margin:4px 0 0}
+#nicknameInput{width:100%;padding:14px;border:1px solid #414960;border-radius:10px;background:#10131c;color:#fff;font-size:16px;margin:12px 0}
+.ranking-tabs{display:flex;gap:8px;margin:15px 0}
+.ranking-tabs button{flex:1;padding:12px 6px;border:1px solid #414960;border-radius:9px;background:#1b2130;color:#f3f5fc}
+.ranking-tabs button.selected{background:#34446c;border-color:#7890ff}
+.ranking-row{display:grid;grid-template-columns:40px minmax(0,1fr) auto;gap:8px;align-items:center;text-align:left;padding:12px 5px;border-bottom:1px solid #323b51;font-size:14px}
+.ranking-rank{color:#f6d365;font-weight:850}
+.ranking-name{overflow-wrap:anywhere}
+.ranking-score{font-weight:800;color:#6de2ae;white-space:nowrap}
+#rankingStatus,#profileStatus{color:#aab4ca;font-size:13px;line-height:1.7}
 @media(max-width:360px){.container{width:94%}#numbers{gap:7px}.num{font-size:21px}.instruction{font-size:15px}.score-value-row{gap:7px}}
 </style>
 </head>
@@ -81,7 +90,37 @@ button{font:inherit;cursor:pointer}
       問題をクリアするたびに制限時間が短くなる。<br>
       誤答すると残り時間が減る。
     </div>
+    <div class="panel">
+      <div id="profileStatus">オンラインランキング接続を確認中...</div>
+      <button class="secondary" onclick="openNicknameSetup()">ニックネームを登録・変更</button>
+      <button class="primary" onclick="openRanking('normal')">オンラインランキング</button>
+    </div>
     <button class="secondary" onclick="showVersions()">いままでのバージョン</button>
+  </section>
+
+  <section id="nicknameSetup" class="hidden">
+    <h2>ニックネーム登録</h2>
+    <div class="panel info">
+      ニックネームだけで登録できます。<br>
+      メールアドレスやパスワードは不要です。<br>
+      1〜20文字で入力してください。同じ名前も使用できます。
+    </div>
+    <input id="nicknameInput" type="text" maxlength="20" placeholder="ニックネーム" autocomplete="nickname">
+    <button class="primary" onclick="registerNickname()">登録する</button>
+    <div id="nicknameStatus" class="info"></div>
+    <button class="secondary" onclick="backToMenu()">メニューに戻る</button>
+  </section>
+
+  <section id="ranking" class="hidden">
+    <h2>ONLINE RANKING</h2>
+    <p class="info">歴代最高得点ランキング</p>
+    <div class="ranking-tabs">
+      <button id="rankNormal" class="selected" onclick="openRanking('normal')">初級</button>
+      <button id="rankAdvanced" onclick="openRanking('advanced')">上級</button>
+    </div>
+    <div id="rankingStatus">ランキングを読み込み中...</div>
+    <div id="rankingList"></div>
+    <button class="secondary" onclick="backToMenu()">メニューに戻る</button>
   </section>
 
   <section id="versions" class="hidden">
@@ -129,12 +168,246 @@ button{font:inherit;cursor:pointer}
     <h2>GAME OVER</h2>
     <div id="resultScore"></div>
     <p class="result-note" id="resultNote"></p>
+    <p class="result-note" id="onlineSaveStatus"></p>
     <button class="primary" onclick="startGame(mode)">もう一度挑戦</button>
+    <button class="secondary" onclick="openRanking(mode)">ランキングを見る</button>
     <button class="secondary" onclick="backToMenu()">メニューに戻る</button>
   </section>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
+/*
+  ここに自分のSupabase情報を設定する。
+  Project URLとPublishable keyを使う。
+  service_role / secret keyは絶対に入れない。
+*/
+const SUPABASE_URL = "https://lwjghracldlocggxsoqo.supabase.co";
+const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_DhwSO4NMBnFduSHzsMwq3Q_z-9GtSVO";
+
+let supabaseClient = null;
+let playerId = null;
+let playerNickname = "";
+let pendingMode = null;
+let rankingMode = "normal";
+
+const PLAYER_STORAGE_KEY = "numberLogicPlayerV1";
+
+function initSupabase(){
+  if(!window.supabase){
+    setProfileStatus("Supabaseライブラリを読み込めませんでした。ゲームは遊べます。");
+    return;
+  }
+  if(SUPABASE_URL.startsWith("YOUR_") ||
+     SUPABASE_PUBLISHABLE_KEY.startsWith("YOUR_")){
+    setProfileStatus("SupabaseのURLと公開キーを設定してください。");
+    return;
+  }
+  try{
+    supabaseClient = window.supabase.createClient(
+      SUPABASE_URL,
+      SUPABASE_PUBLISHABLE_KEY
+    );
+    loadSavedPlayer();
+  }catch(error){
+    console.error(error);
+    setProfileStatus("Supabaseの初期化に失敗しました。");
+  }
+}
+
+function setProfileStatus(message){
+  const el=document.getElementById("profileStatus");
+  if(el)el.textContent=message;
+}
+
+function loadSavedPlayer(){
+  try{
+    const saved=localStorage.getItem(PLAYER_STORAGE_KEY);
+    if(saved){
+      const parsed=JSON.parse(saved);
+      if(parsed && parsed.id && parsed.nickname){
+        playerId=parsed.id;
+        playerNickname=parsed.nickname;
+        setProfileStatus("登録済み： "+playerNickname+" さん");
+        return;
+      }
+    }
+  }catch(error){
+    console.warn("保存済みプレイヤー情報を読み込めませんでした。",error);
+  }
+  setProfileStatus("まだニックネームが登録されていません。");
+}
+
+function createPlayerId(){
+  if(window.crypto && typeof window.crypto.randomUUID==="function"){
+    return window.crypto.randomUUID();
+  }
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g,c=>{
+    const r=Math.random()*16|0;
+    return (c==="x"?r:(r&0x3|0x8)).toString(16);
+  });
+}
+
+function openNicknameSetup(){
+  hideAllSections();
+  document.getElementById("nicknameSetup").classList.remove("hidden");
+  document.getElementById("nicknameInput").value=playerNickname;
+  document.getElementById("nicknameStatus").textContent="";
+}
+
+async function registerNickname(){
+  const input=document.getElementById("nicknameInput");
+  const status=document.getElementById("nicknameStatus");
+  const nickname=input.value.trim();
+
+  if(!nickname || nickname.length>20){
+    status.textContent="ニックネームは1〜20文字で入力してください。";
+    return;
+  }
+  if(!supabaseClient){
+    status.textContent="Supabaseが未設定です。URLと公開キーを確認してください。";
+    return;
+  }
+
+  status.textContent="登録中...";
+  const id=playerId || createPlayerId();
+
+  try{
+    const {data,error}=await supabaseClient.rpc("register_player",{
+      p_id:id,
+      p_nickname:nickname
+    });
+    if(error)throw error;
+
+    const registered=Array.isArray(data)?data[0]:data;
+    if(!registered || !registered.id){
+      throw new Error("登録結果を確認できませんでした。");
+    }
+
+    playerId=registered.id;
+    playerNickname=registered.nickname;
+
+    try{
+      localStorage.setItem(PLAYER_STORAGE_KEY,JSON.stringify({
+        id:playerId,
+        nickname:playerNickname
+      }));
+    }catch(storageError){
+      console.warn("ブラウザにプレイヤー情報を保存できませんでした。",storageError);
+    }
+
+    setProfileStatus("登録済み： "+playerNickname+" さん");
+    status.textContent="登録しました！";
+
+    const nextMode=pendingMode;
+    pendingMode=null;
+    setTimeout(()=>{
+      if(nextMode){
+        startGame(nextMode);
+      }else{
+        backToMenu();
+      }
+    },400);
+  }catch(error){
+    console.error(error);
+    status.textContent="登録できませんでした。通信状況とSupabaseの設定を確認してください。";
+  }
+}
+
+function hideAllSections(){
+  ["menu","nicknameSetup","ranking","versions","game","result"].forEach(id=>{
+    document.getElementById(id).classList.add("hidden");
+  });
+}
+
+async function openRanking(selectedMode){
+  rankingMode=selectedMode==="advanced"?"advanced":"normal";
+  hideAllSections();
+  document.getElementById("ranking").classList.remove("hidden");
+
+  document.getElementById("rankNormal").classList.toggle("selected",rankingMode==="normal");
+  document.getElementById("rankAdvanced").classList.toggle("selected",rankingMode==="advanced");
+
+  const status=document.getElementById("rankingStatus");
+  const list=document.getElementById("rankingList");
+  status.textContent="ランキングを読み込み中...";
+  list.replaceChildren();
+
+  if(!supabaseClient){
+    status.textContent="Supabaseが未設定です。URLと公開キーを確認してください。";
+    return;
+  }
+
+  try{
+    const {data,error}=await supabaseClient
+      .from("best_scores")
+      .select("player_id, mode, best_score, players(nickname)")
+      .eq("mode",rankingMode)
+      .order("best_score",{ascending:false})
+      .limit(50);
+
+    if(error)throw error;
+
+    if(!data || data.length===0){
+      status.textContent="まだランキング記録がありません。最初の記録を作ろう！";
+      return;
+    }
+
+    status.textContent=(rankingMode==="normal"?"初級":"上級")+"・上位50人";
+    data.forEach((entry,index)=>{
+      const row=document.createElement("div");
+      row.className="ranking-row";
+
+      const rank=document.createElement("span");
+      rank.className="ranking-rank";
+      rank.textContent=String(index+1);
+
+      const name=document.createElement("span");
+      name.className="ranking-name";
+      const nickname=entry.players && entry.players.nickname
+        ? entry.players.nickname
+        : "プレイヤー";
+      name.textContent=nickname;
+
+      const points=document.createElement("span");
+      points.className="ranking-score";
+      points.textContent=Number(entry.best_score).toLocaleString("ja-JP")+"点";
+
+      row.append(rank,name,points);
+      list.appendChild(row);
+    });
+  }catch(error){
+    console.error(error);
+    status.textContent="ランキングを読み込めませんでした。SQL設定と通信状況を確認してください。";
+  }
+}
+
+async function saveBestScore(){
+  if(!supabaseClient || !playerId){
+    document.getElementById("onlineSaveStatus").textContent=
+      "オンライン記録を保存するには、ニックネーム登録が必要です。";
+    return;
+  }
+
+  document.getElementById("onlineSaveStatus").textContent="オンライン記録を保存中...";
+
+  try{
+    const {error}=await supabaseClient.rpc("submit_best_score",{
+      p_id:playerId,
+      p_mode:mode==="advanced"?"advanced":"beginner",
+      p_score:score
+    });
+    if(error)throw error;
+
+    document.getElementById("onlineSaveStatus").textContent=
+      "オンラインランキングに記録を送信しました！";
+  }catch(error){
+    console.error(error);
+    document.getElementById("onlineSaveStatus").textContent=
+      "オンライン保存に失敗しました。ゲームの得点はそのままです。";
+  }
+}
+
 let mode="normal";
 let version="latest";
 let q=null;
@@ -182,16 +455,13 @@ function randomItem(arr){
 function showVersions(){
   active=false;
   clearTimers();
-  document.getElementById("menu").classList.add("hidden");
-  document.getElementById("game").classList.add("hidden");
-  document.getElementById("result").classList.add("hidden");
+  hideAllSections();
   document.getElementById("versions").classList.remove("hidden");
 }
 
 function selectVersion(v){
   version=v;
-  document.getElementById("versions").classList.add("hidden");
-  document.getElementById("menu").classList.remove("hidden");
+  backToMenu();
 }
 
 function makePredicates(){
@@ -364,6 +634,14 @@ function showScoreGain(points){
 }
 
 function startGame(selectedMode){
+  if(!playerId){
+    pendingMode=selectedMode||mode;
+    openNicknameSetup();
+    document.getElementById("nicknameStatus").textContent=
+      "ゲームを始める前にニックネームを登録してください。";
+    return;
+  }
+
   clearTimers();
   if(gainId!==null){clearTimeout(gainId);gainId=null;}
 
@@ -385,9 +663,7 @@ function startGame(selectedMode){
     wrongPenalty=0;
   }
 
-  document.getElementById("menu").classList.add("hidden");
-  document.getElementById("versions").classList.add("hidden");
-  document.getElementById("result").classList.add("hidden");
+  hideAllSections();
   document.getElementById("game").classList.remove("hidden");
 
   document.getElementById("modeLabel").textContent=
@@ -459,9 +735,6 @@ function tap(button,cell,n){
       questionLocked=true;
       clearTimers();
 
-      // 残り時間が制限時間の50%以上なら1.5倍。
-      // 約数条件を1つでも含む問題なら2倍。
-      // 両方に該当する場合は約数ボーナスを優先し、2倍のみ。
       let multiplier=1;
       const remaining=Math.max(0,(deadline-Date.now())/1000);
       const hasDivisor=version==="latest"&&(
@@ -549,6 +822,9 @@ function endGame(){
   document.getElementById("resultNote").textContent=
     `${VERSION_NAMES[version]}・${mode==="advanced"?"上級":"初級"}に挑戦お疲れさま！ 挑戦した問題数：${round}問`;
 
+  document.getElementById("onlineSaveStatus").textContent="";
+  saveBestScore();
+
   vibrate([80,50,120]);
 }
 
@@ -566,11 +842,12 @@ function backToMenu(){
     if("vibrate" in navigator)navigator.vibrate(0);
   }catch(e){}
 
-  document.getElementById("game").classList.add("hidden");
-  document.getElementById("result").classList.add("hidden");
-  document.getElementById("versions").classList.add("hidden");
+  hideAllSections();
   document.getElementById("menu").classList.remove("hidden");
+  loadSavedPlayer();
 }
+
+initSupabase();
 </script>
 </body>
 </html>
