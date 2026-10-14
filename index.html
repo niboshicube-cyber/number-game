@@ -79,7 +79,7 @@ button{font:inherit;cursor:pointer}
     <div class="panel info">
       数字は1〜10。正解をすべてタップすると得点。<br>
       問題をクリアするたびに制限時間が短くなる。<br>
-      誤答すると残り時間が1.5秒減る。
+      誤答すると残り時間が減る。
     </div>
     <button class="secondary" onclick="showVersions()">いままでのバージョン</button>
   </section>
@@ -97,7 +97,7 @@ button{font:inherit;cursor:pointer}
       </button>
       <button class="mode-button" style="width:100%;margin-top:10px" onclick="selectVersion('latest')">
         最新版
-        <small>現在のルール・得点調整・約数条件</small>
+        <small>現在のルール・得点ボーナス・約数条件</small>
       </button>
     </div>
     <button class="secondary" onclick="backToMenu()">メニューに戻る</button>
@@ -146,7 +146,7 @@ let countId=null;
 let nextId=null;
 let gainId=null;
 let deadline=0;
-let wrongPenalty=1.5;
+let wrongPenalty=0.5;
 let questionLocked=false;
 let currentCorrect=new Set();
 let selectedCorrect=new Set();
@@ -200,7 +200,6 @@ function makePredicates(){
     type,value,label,difficulty,test
   });
 
-  // どの版にも共通する基本条件
   for(const item of [
     {label:"3以下",value:3,type:"le"},
     {label:"5以下",value:5,type:"le"},
@@ -213,13 +212,11 @@ function makePredicates(){
       item.type==="le"?n=>n<=item.value:n=>n>=item.value);
   }
 
-  // 初期版では偶数・奇数も独立した条件
   if(version==="v1"){
     add("even",null,"偶数",600,n=>n%2===0);
     add("odd",null,"奇数",600,n=>n%2===1);
   }
 
-  // 倍数条件
   const maxMultiple=version==="v1"?5:10;
   for(let k=1;k<=maxMultiple;k++){
     const difficulty=version==="v1"
@@ -236,7 +233,6 @@ function makePredicates(){
     version==="v1"?1200:2000,
     n=>isPrime(n));
 
-  // 初期版・発展版では1〜10の約数条件を扱う
   const maxN=version==="v1"?30:200;
   for(let N=1;N<=maxN;N++){
     const divisors=[];
@@ -281,7 +277,6 @@ function makeAdvancedQuestion(){
   const all=makePredicates();
   let predicates=all;
 
-  // 最新版では、約数条件を問題候補に含める確率を少しずつ上げる
   if(version==="latest"){
     const others=all.filter(p=>p.type!=="divisor");
     const divisors=all.filter(p=>p.type==="divisor");
@@ -382,15 +377,12 @@ function startGame(selectedMode){
   active=true;
   questionLocked=false;
 
-  if(version==="v1"){
-    questionLimit=mode==="advanced"?10:5;
-    wrongPenalty=0;
-  }else if(version==="v2"){
-    questionLimit=mode==="advanced"?10:5;
-    wrongPenalty=0;
+  questionLimit=mode==="advanced"?10:5;
+
+  if(version==="latest"){
+    wrongPenalty=mode==="normal"?0.5:1.5;
   }else{
-    questionLimit=mode==="advanced"?10:5;
-    wrongPenalty=1.5;
+    wrongPenalty=0;
   }
 
   document.getElementById("menu").classList.add("hidden");
@@ -467,16 +459,43 @@ function tap(button,cell,n){
       questionLocked=true;
       clearTimers();
 
-      score+=currentQuestionPoints;
+      // 残り時間が制限時間の50%以上なら1.5倍。
+      // 約数条件を1つでも含む問題なら2倍。
+      // 両方に該当する場合は約数ボーナスを優先し、2倍のみ。
+      let multiplier=1;
+      const remaining=Math.max(0,(deadline-Date.now())/1000);
+      const hasDivisor=version==="latest"&&(
+        q.predicate?.type==="divisor"||
+        q.first?.type==="divisor"||
+        q.second?.type==="divisor"
+      );
+
+      if(version==="latest"){
+        if(hasDivisor){
+          multiplier=2;
+        }else if(remaining/questionLimit>=0.5){
+          multiplier=1.5;
+        }
+      }
+
+      const earnedPoints=Math.round(currentQuestionPoints*multiplier);
+      score+=earnedPoints;
+
       document.getElementById("score").textContent=
         score.toLocaleString("ja-JP");
-      showScoreGain(currentQuestionPoints);
+      showScoreGain(earnedPoints);
       vibrate([25,40,45]);
 
-      document.getElementById("message").textContent=
-        `完全正解！ +${currentQuestionPoints.toLocaleString("ja-JP")}点`;
+      let bonusText="";
+      if(multiplier===2){
+        bonusText="（約数ボーナス2倍）";
+      }else if(multiplier===1.5){
+        bonusText="（スピードボーナス1.5倍）";
+      }
 
-      // Ver.1・Ver.2は初期時間を保ち、最新版のみ短縮する
+      document.getElementById("message").textContent=
+        `完全正解！ +${earnedPoints.toLocaleString("ja-JP")}点${bonusText}`;
+
       if(version==="latest"){
         questionLimit=Math.max(0.25,questionLimit-0.25);
       }
@@ -490,12 +509,16 @@ function tap(button,cell,n){
 
     if(wrongPenalty>0){
       deadline-=wrongPenalty*1000;
+
       const penalty=document.createElement("span");
       penalty.className="penalty";
-      penalty.textContent="−1.5s";
+      penalty.textContent=`−${wrongPenalty}秒`;
       cell.appendChild(penalty);
       setTimeout(()=>{if(penalty.parentNode)penalty.remove();},900);
-      document.getElementById("message").textContent="誤答！ −1.5秒";
+
+      document.getElementById("message").textContent=
+        `誤答！ −${wrongPenalty}秒`;
+
       vibrate([70,35,70]);
       updateTimer();
     }else{
