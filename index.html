@@ -470,7 +470,6 @@ function makePredicates(){
     type,value,label,difficulty,test
   });
 
-  // 一次不等式：表示は不等号で統一
   for(const item of [
     {label:"n<4",value:4,type:"lt"},
     {label:"n<6",value:6,type:"lt"},
@@ -512,7 +511,6 @@ function makePredicates(){
     version==="v1"?1200:2000,
     n=>isPrime(n));
 
-  // 発展ルール：二次不等式 n² < c と剰余条件 a(mod b)
   if(version!=="v1"){
     for(let c=1;c<=100;c++){
       add("quadratic",c,`n² < ${c}`,2200+(100-c)*0.1,n=>n*n<c);
@@ -553,11 +551,13 @@ function getCorrect(test){
 function makeNormalQuestion(){
   const all=makePredicates();
   const questionNumber=round+1;
-  const divisorChance=Math.min(0.1,0.01*(questionNumber-1));
+  // 約数・剰余条件・二次不等式は、1問目0%から10問目3.3%へ段階的に増やす
+  const rareConditionChance=Math.min(0.033,(questionNumber-1)*(0.033/9));
+  const rareTypes=["divisor","mod","quadratic"];
 
   const predicates=all.filter(p=>{
-    if(p.type!=="divisor")return true;
-    return Math.random()<divisorChance;
+    if(!rareTypes.includes(p.type))return true;
+    return Math.random()<rareConditionChance;
   });
 
   let p,correct;
@@ -579,13 +579,15 @@ function makeAdvancedQuestion(){
   let predicates=all;
 
   if(version==="latest"){
-    const others=all.filter(p=>p.type!=="divisor");
-    const divisors=all.filter(p=>p.type==="divisor");
+    // 約数・剰余条件・二次不等式は、1問目0%から10問目3.3%へ段階的に増やす
+    const rareTypes=["divisor","mod","quadratic"];
+    const others=all.filter(p=>!rareTypes.includes(p.type));
+    const rareConditions=all.filter(p=>rareTypes.includes(p.type));
     const questionNumber=round+1;
-    const divisorChance=Math.min(0.1,0.01*(questionNumber-1));
+    const rareConditionChance=Math.min(0.033,(questionNumber-1)*(0.033/9));
     predicates=[
       ...others,
-      ...divisors.filter(()=>Math.random()<divisorChance)
+      ...rareConditions.filter(()=>Math.random()<rareConditionChance)
     ];
   }
 
@@ -887,7 +889,6 @@ function endGame(){
   document.getElementById("resultNote").textContent=
     `${VERSION_NAMES[version]}・${mode==="advanced"?"上級":"初級"}に挑戦お疲れさま！ 挑戦した問題数：${round}問`;
 
-  showPersonalBestEffect();
   document.getElementById("onlineSaveStatus").textContent="";
   saveBestScore();
 
