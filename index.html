@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="ja">
 <head>
@@ -62,6 +61,11 @@ button{font:inherit;cursor:pointer}
 .ranking-name{overflow-wrap:anywhere}
 .ranking-score{font-weight:800;color:#6de2ae;white-space:nowrap}
 #rankingStatus,#profileStatus{color:#aab4ca;font-size:13px;line-height:1.7}
+#personalBestEffect{position:fixed;inset:0;z-index:20;pointer-events:none;overflow:hidden}
+.confetti-piece{position:absolute;top:-20px;width:8px;height:13px;border-radius:2px;animation:confettiFall 2.4s ease-in forwards}
+@keyframes confettiFall{0%{transform:translateY(-20px) rotate(0deg);opacity:1}100%{transform:translateY(110vh) rotate(760deg);opacity:0}}
+.plushie-launch{position:absolute;left:8%;bottom:-100px;font-size:76px;animation:plushieFly 1.65s cubic-bezier(.15,.75,.3,1) forwards;filter:drop-shadow(0 5px 10px #0008)}
+@keyframes plushieFly{0%{transform:translate(0,0) rotate(-25deg) scale(.55);opacity:0}20%{opacity:1}75%{transform:translate(58vw,-75vh) rotate(22deg) scale(1.15);opacity:1}100%{transform:translate(72vw,-95vh) rotate(35deg) scale(.8);opacity:0}}
 @media(max-width:360px){.container{width:94%}#numbers{gap:7px}.num{font-size:21px}.instruction{font-size:15px}.score-value-row{gap:7px}}
 </style>
 </head>
@@ -174,6 +178,8 @@ button{font:inherit;cursor:pointer}
     <button class="secondary" onclick="backToMenu()">メニューに戻る</button>
   </section>
 </div>
+
+<div id="personalBestEffect" class="hidden"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
@@ -464,16 +470,25 @@ function makePredicates(){
     type,value,label,difficulty,test
   });
 
+  // 一次不等式：表示は不等号で統一
   for(const item of [
-    {label:"3以下",value:3,type:"le"},
-    {label:"5以下",value:5,type:"le"},
-    {label:"7以下",value:7,type:"le"},
-    {label:"4以上",value:4,type:"ge"},
-    {label:"6以上",value:6,type:"ge"},
-    {label:"8以上",value:8,type:"ge"}
+    {label:"n<4",value:4,type:"lt"},
+    {label:"n<6",value:6,type:"lt"},
+    {label:"n<8",value:8,type:"lt"},
+    {label:"n>3",value:3,type:"gt"},
+    {label:"n>5",value:5,type:"gt"},
+    {label:"n>7",value:7,type:"gt"},
+    {label:"n≦3",value:3,type:"le"},
+    {label:"n≦5",value:5,type:"le"},
+    {label:"n≦7",value:7,type:"le"},
+    {label:"n≧4",value:4,type:"ge"},
+    {label:"n≧6",value:6,type:"ge"},
+    {label:"n≧8",value:8,type:"ge"}
   ]){
-    add(item.type,item.value,item.label,500+item.value*10,
-      item.type==="le"?n=>n<=item.value:n=>n>=item.value);
+    const test=item.type==="le"?n=>n<=item.value:
+      item.type==="ge"?n=>n>=item.value:
+      item.type==="lt"?n=>n<item.value:n=>n>item.value;
+    add(item.type,item.value,item.label,500+item.value*10,test);
   }
 
   if(version==="v1"){
@@ -496,6 +511,20 @@ function makePredicates(){
   add("prime",null,"素数",
     version==="v1"?1200:2000,
     n=>isPrime(n));
+
+  // 発展ルール：二次不等式 n² < c と剰余条件 a(mod b)
+  if(version!=="v1"){
+    for(let c=1;c<=100;c++){
+      add("quadratic",c,`n² < ${c}`,2200+(100-c)*0.1,n=>n*n<c);
+    }
+
+    for(let b=2;b<=10;b++){
+      for(let a=1;a<b;a++){
+        add("mod",{a,b},`${a}(mod${b})`,2300+(10-b)*10+a,
+          n=>n%b===a%b);
+      }
+    }
+  }
 
   const maxN=version==="v1"?30:200;
   for(let N=1;N<=maxN;N++){
@@ -803,6 +832,40 @@ function tap(button,cell,n){
   }
 }
 
+function showPersonalBestEffect(){
+  const storageKey=`numberLogicBest_${version}_${mode}`;
+  let previousBest=0;
+  try{previousBest=Number(localStorage.getItem(storageKey)||0);}catch(e){}
+  if(score<=previousBest)return;
+
+  try{localStorage.setItem(storageKey,String(score));}catch(e){}
+  const layer=document.getElementById("personalBestEffect");
+  layer.replaceChildren();
+  layer.classList.remove("hidden");
+
+  const plushie=document.createElement("div");
+  plushie.className="plushie-launch";
+  plushie.textContent="🧸";
+  layer.appendChild(plushie);
+
+  const pieces=["#f6d365","#ff6b8a","#6de2ae","#7890ff","#d7a6ff","#ffffff"];
+  for(let i=0;i<65;i++){
+    const piece=document.createElement("span");
+    piece.className="confetti-piece";
+    piece.style.left=(Math.random()*100)+"%";
+    piece.style.background=pieces[Math.floor(Math.random()*pieces.length)];
+    piece.style.animationDelay=(Math.random()*0.9)+"s";
+    piece.style.animationDuration=(1.7+Math.random()*1.5)+"s";
+    layer.appendChild(piece);
+  }
+  document.getElementById("resultNote").textContent=
+    `${VERSION_NAMES[version]}・${mode==="advanced"?"上級":"初級"}に挑戦お疲れさま！ 挑戦した問題数：${round}問　自己ベスト更新！`;
+  setTimeout(()=>{
+    layer.classList.add("hidden");
+    layer.replaceChildren();
+  },4000);
+}
+
 function endGame(){
   if(!active)return;
   active=false;
@@ -824,6 +887,7 @@ function endGame(){
   document.getElementById("resultNote").textContent=
     `${VERSION_NAMES[version]}・${mode==="advanced"?"上級":"初級"}に挑戦お疲れさま！ 挑戦した問題数：${round}問`;
 
+  showPersonalBestEffect();
   document.getElementById("onlineSaveStatus").textContent="";
   saveBestScore();
 
