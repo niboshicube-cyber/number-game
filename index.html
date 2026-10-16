@@ -179,8 +179,6 @@ button{font:inherit;cursor:pointer}
   </section>
 </div>
 
-<div id="personalBestEffect" class="hidden"></div>
-
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 const SUPABASE_URL = "https://lwjghracldlocggxsoqo.supabase.co";
@@ -470,23 +468,16 @@ function makePredicates(){
     type,value,label,difficulty,test
   });
 
+  // 不等号で表す条件は使わず、「〜以下」「〜以上」だけにする
   for(const item of [
-    {label:"n<4",value:4,type:"lt"},
-    {label:"n<6",value:6,type:"lt"},
-    {label:"n<8",value:8,type:"lt"},
-    {label:"n>3",value:3,type:"gt"},
-    {label:"n>5",value:5,type:"gt"},
-    {label:"n>7",value:7,type:"gt"},
-    {label:"n≦3",value:3,type:"le"},
-    {label:"n≦5",value:5,type:"le"},
-    {label:"n≦7",value:7,type:"le"},
-    {label:"n≧4",value:4,type:"ge"},
-    {label:"n≧6",value:6,type:"ge"},
-    {label:"n≧8",value:8,type:"ge"}
+    {label:"3以下",value:3,type:"le"},
+    {label:"5以下",value:5,type:"le"},
+    {label:"7以下",value:7,type:"le"},
+    {label:"4以上",value:4,type:"ge"},
+    {label:"6以上",value:6,type:"ge"},
+    {label:"8以上",value:8,type:"ge"}
   ]){
-    const test=item.type==="le"?n=>n<=item.value:
-      item.type==="ge"?n=>n>=item.value:
-      item.type==="lt"?n=>n<item.value:n=>n>item.value;
+    const test=item.type==="le"?n=>n<=item.value:n=>n>=item.value;
     add(item.type,item.value,item.label,500+item.value*10,test);
   }
 
@@ -511,11 +502,8 @@ function makePredicates(){
     version==="v1"?1200:2000,
     n=>isPrime(n));
 
+  // 発展ルール：剰余条件 mod。二次不等式は追加しない
   if(version!=="v1"){
-    for(let c=1;c<=100;c++){
-      add("quadratic",c,`n² < ${c}`,2200+(100-c)*0.1,n=>n*n<c);
-    }
-
     for(let b=2;b<=10;b++){
       for(let a=1;a<b;a++){
         add("mod",{a,b},`${a}(mod${b})`,2300+(10-b)*10+a,
@@ -551,9 +539,10 @@ function getCorrect(test){
 function makeNormalQuestion(){
   const all=makePredicates();
   const questionNumber=round+1;
-  // 約数・剰余条件・二次不等式は、1問目0%から10問目3.3%へ段階的に増やす
-  const rareConditionChance=Math.min(0.033,(questionNumber-1)*(0.033/9));
-  const rareTypes=["divisor","mod","quadratic"];
+
+  // 約数・modは1問目0%、10問目5%へ段階的に増やす
+  const rareConditionChance=Math.min(0.05,(questionNumber-1)*(0.05/9));
+  const rareTypes=["divisor","mod"];
 
   const predicates=all.filter(p=>{
     if(!rareTypes.includes(p.type))return true;
@@ -579,12 +568,12 @@ function makeAdvancedQuestion(){
   let predicates=all;
 
   if(version==="latest"){
-    // 約数・剰余条件・二次不等式は、1問目0%から10問目3.3%へ段階的に増やす
-    const rareTypes=["divisor","mod","quadratic"];
+    // 約数・modは1問目0%、10問目5%へ段階的に増やす
+    const rareTypes=["divisor","mod"];
     const others=all.filter(p=>!rareTypes.includes(p.type));
     const rareConditions=all.filter(p=>rareTypes.includes(p.type));
     const questionNumber=round+1;
-    const rareConditionChance=Math.min(0.033,(questionNumber-1)*(0.033/9));
+    const rareConditionChance=Math.min(0.05,(questionNumber-1)*(0.05/9));
     predicates=[
       ...others,
       ...rareConditions.filter(()=>Math.random()<rareConditionChance)
