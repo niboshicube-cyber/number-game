@@ -11,7 +11,7 @@ body{margin:0;background:#10131c;color:#f3f5fc;font-family:-apple-system,BlinkMa
 h1{font-size:32px;letter-spacing:4px;margin:12px 0 6px}
 .subtitle{color:#8d96ad;font-size:12px;letter-spacing:3px;margin-bottom:28px}
 button{font:inherit;cursor:pointer}
-.mode-buttons{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:24px 0}
+.mode-buttons{display:flex;gap:12px;margin:24px 0}
 .mode-button{flex:1;padding:17px 8px;border:1px solid #414960;border-radius:12px;background:#1b2130;color:#f3f5fc;font-weight:700;font-size:16px}
 .mode-button:hover{background:#28334a}
 .mode-button small{display:block;margin-top:7px;font-size:11px;color:#9da9c2;font-weight:400}
@@ -25,7 +25,6 @@ button{font:inherit;cursor:pointer}
 .instruction{border:1px solid #46516b;border-radius:12px;background:#141a27;padding:20px 12px;margin:20px 0;line-height:2;font-size:17px;font-weight:650;overflow-wrap:anywhere}
 .logic{display:inline-block;padding:1px 7px;margin:0 3px;border:1px solid #7483a4;border-radius:6px;background:#29334a;color:#d9e4ff;font-size:.9em;white-space:nowrap}
 #numbers{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin:22px 0}
-#numbers.board-16{grid-template-columns:repeat(4,minmax(0,1fr))}
 .cell{position:relative;min-width:0}
 .num{width:100%;aspect-ratio:1;border:1px solid #414b63;border-radius:12px;background:#20283a;color:#f3f5fc;font-size:24px;font-weight:750;transition:background .12s,border-color .12s,transform .12s}
 .num:active{transform:scale(.94)}
@@ -77,7 +76,7 @@ button{font:inherit;cursor:pointer}
 
   <section id="menu">
     <p class="info">
-      お題の条件に当てはまる数字をタップしよう。<br>
+      お題の条件に当てはまる数字をタップしようんこ。<br>
       間違えると残り時間が減るぞ。
     </p>
     <div class="mode-buttons">
@@ -89,17 +88,9 @@ button{font:inherit;cursor:pointer}
         上級
         <small>制限時間 10秒・条件の組み合わせ</small>
       </button>
-      <button id="normal16Button" class="mode-button" onclick="startGame('normal16')">
-        16初級
-        <small id="normal16Status">初級15,000点で解放</small>
-      </button>
-      <button id="advanced16Button" class="mode-button" onclick="startGame('advanced16')">
-        16上級
-        <small id="advanced16Status">上級50,000点で解放</small>
-      </button>
     </div>
     <div class="panel info">
-      通常モードの数字は1〜10、16モードは1〜16。正解をすべてタップすると得点。<br>
+      数字は1〜10。正解をすべてタップすると得点。<br>
       問題をクリアするたびに制限時間が短くなる。<br>
       誤答すると残り時間が減る。
     </div>
@@ -187,6 +178,7 @@ button{font:inherit;cursor:pointer}
     <button class="secondary" onclick="backToMenu()">メニューに戻る</button>
   </section>
 </div>
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 const SUPABASE_URL = "https://lwjghracldlocggxsoqo.supabase.co";
@@ -211,10 +203,7 @@ function initSupabase(){
     return;
   }
   try{
-    supabaseClient = window.supabase.createClient(
-      SUPABASE_URL,
-      SUPABASE_PUBLISHABLE_KEY
-    );
+    supabaseClient = window.supabase.createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY);
     loadSavedPlayer();
   }catch(error){
     console.error(error);
@@ -328,9 +317,7 @@ function hideAllSections(){
 }
 
 async function openRanking(selectedMode){
-  rankingMode=selectedMode==="advanced"||selectedMode==="advanced16"
-    ?"advanced":"normal";
-
+  rankingMode=selectedMode==="advanced"?"advanced":"normal";
   hideAllSections();
   document.getElementById("ranking").classList.remove("hidden");
 
@@ -405,7 +392,7 @@ async function saveBestScore(){
   try{
     const {error}=await supabaseClient.rpc("submit_best_score",{
       p_id:playerId,
-      p_mode=isAdvancedMode(mode)?"advanced":"beginner",
+      p_mode:mode==="advanced"?"advanced":"beginner",
       p_score:score
     });
     if(error)throw error;
@@ -442,60 +429,6 @@ const VERSION_NAMES={
   latest:"最新版"
 };
 
-function isAdvancedMode(m=mode){
-  return m==="advanced"||m==="advanced16";
-}
-
-function is16Mode(m=mode){
-  return m==="normal16"||m==="advanced16";
-}
-
-function baseMode(m=mode){
-  return isAdvancedMode(m)?"advanced":"normal";
-}
-
-function numberMax(m=mode){
-  return is16Mode(m)?16:10;
-}
-
-function getUnlockBest(m){
-  try{
-    return Number(localStorage.getItem(`numberLogicUnlockBest_${m}`)||0);
-  }catch(error){
-    return 0;
-  }
-}
-
-function isModeUnlocked(m){
-  if(m==="normal16")return getUnlockBest("normal")>=15000;
-  if(m==="advanced16")return getUnlockBest("advanced")>=50000;
-  return true;
-}
-
-function updateModeLocks(){
-  const normalUnlocked=isModeUnlocked("normal16");
-  const advancedUnlocked=isModeUnlocked("advanced16");
-
-  const normalButton=document.getElementById("normal16Button");
-  const advancedButton=document.getElementById("advanced16Button");
-  const normalStatus=document.getElementById("normal16Status");
-  const advancedStatus=document.getElementById("advanced16Status");
-
-  if(normalButton)normalButton.disabled=!normalUnlocked;
-  if(advancedButton)advancedButton.disabled=!advancedUnlocked;
-
-  if(normalStatus){
-    normalStatus.textContent=normalUnlocked
-      ?"解放済み・数字1〜16"
-      :"初級15,000点で解放";
-  }
-  if(advancedStatus){
-    advancedStatus.textContent=advancedUnlocked
-      ?"解放済み・数字1〜16"
-      :"上級50,000点で解放";
-  }
-}
-
 function vibrate(pattern){
   try{
     if("vibrate" in navigator)navigator.vibrate(pattern);
@@ -528,6 +461,7 @@ function selectVersion(v){
   version=v;
   backToMenu();
 }
+
 function makePredicates(){
   const predicates=[];
   const add=(type,value,label,difficulty,test)=>predicates.push({
@@ -543,9 +477,7 @@ function makePredicates(){
     {label:"6以上",value:6,type:"ge"},
     {label:"8以上",value:8,type:"ge"}
   ]){
-    const test=item.type==="le"
-      ?n=>n<=item.value
-      :n=>n>=item.value;
+    const test=item.type==="le"?n=>n<=item.value:n=>n>=item.value;
     add(item.type,item.value,item.label,500+item.value*10,test);
   }
 
@@ -570,7 +502,7 @@ function makePredicates(){
     version==="v1"?1200:2000,
     n=>isPrime(n));
 
-  // 発展ルール：剰余条件 mod
+  // 発展ルール：剰余条件 mod。二次不等式は追加しない
   if(version!=="v1"){
     for(let b=2;b<=10;b++){
       for(let a=1;a<b;a++){
@@ -580,16 +512,10 @@ function makePredicates(){
     }
   }
 
-  // 約数の対象Nは200以下。
-  // 16モードでは1〜16の盤面上で判定する。
   const maxN=version==="v1"?30:200;
-  const boardMax=numberMax();
-
   for(let N=1;N<=maxN;N++){
     const divisors=[];
-    for(let n=1;n<=boardMax;n++){
-      if(N%n===0)divisors.push(n);
-    }
+    for(let n=1;n<=10;n++)if(N%n===0)divisors.push(n);
 
     if(version!=="v1"&&divisors.length<3)continue;
     if(version==="v1"&&divisors.length<2)continue;
@@ -606,9 +532,7 @@ function makePredicates(){
 
 function getCorrect(test){
   const result=[];
-  for(let n=1;n<=numberMax();n++){
-    if(test(n))result.push(n);
-  }
+  for(let n=1;n<=10;n++)if(test(n))result.push(n);
   return result;
 }
 
@@ -617,10 +541,7 @@ function makeNormalQuestion(){
   const questionNumber=round+1;
 
   // 約数・modは1問目0%、10問目5%へ段階的に増やす
-  const rareConditionChance=Math.min(
-    0.05,
-    (questionNumber-1)*(0.05/9)
-  );
+  const rareConditionChance=Math.min(0.05,(questionNumber-1)*(0.05/9));
   const rareTypes=["divisor","mod"];
 
   const predicates=all.filter(p=>{
@@ -632,10 +553,7 @@ function makeNormalQuestion(){
   do{
     p=randomItem(predicates);
     correct=getCorrect(p.test);
-  }while(
-    correct.length===0||
-    correct.length===numberMax()
-  );
+  }while(correct.length===0||correct.length===10);
 
   return {
     label:p.label,
@@ -655,11 +573,7 @@ function makeAdvancedQuestion(){
     const others=all.filter(p=>!rareTypes.includes(p.type));
     const rareConditions=all.filter(p=>rareTypes.includes(p.type));
     const questionNumber=round+1;
-    const rareConditionChance=Math.min(
-      0.05,
-      (questionNumber-1)*(0.05/9)
-    );
-
+    const rareConditionChance=Math.min(0.05,(questionNumber-1)*(0.05/9));
     predicates=[
       ...others,
       ...rareConditions.filter(()=>Math.random()<rareConditionChance)
@@ -699,23 +613,21 @@ function makeAdvancedQuestion(){
 }
 
 function makeQuestion(){
-  if(!isAdvancedMode())return makeNormalQuestion();
+  if(mode==="normal")return makeNormalQuestion();
 
   let question,attempts=0;
   do{
     question=makeAdvancedQuestion();
     attempts++;
   }while(
-    (question.correct.length===0||
-     question.correct.length===numberMax())
+    (question.correct.length===0||question.correct.length===10)
     &&attempts<100
   );
-
   return question;
 }
 
 function calculateQuestionPoints(question){
-  if(!isAdvancedMode())return question.predicate.difficulty;
+  if(mode!=="advanced")return question.predicate.difficulty;
 
   let points=question.first.difficulty+question.second.difficulty;
 
@@ -727,10 +639,7 @@ function calculateQuestionPoints(question){
 
 function showScoreGain(points){
   const gain=document.getElementById("scoreGain");
-  if(gainId!==null){
-    clearTimeout(gainId);
-    gainId=null;
-  }
+  if(gainId!==null){clearTimeout(gainId);gainId=null;}
 
   gain.classList.remove("show","big");
   void gain.offsetWidth;
@@ -747,20 +656,8 @@ function showScoreGain(points){
 }
 
 function startGame(selectedMode){
-  const requestedMode=selectedMode||mode;
-
-  if(!isModeUnlocked(requestedMode)){
-    alert(
-      requestedMode==="normal16"
-        ?"16初級は、通常の初級で15,000点以上を獲得すると解放されます。"
-        :"16上級は、通常の上級で50,000点以上を獲得すると解放されます。"
-    );
-    updateModeLocks();
-    return;
-  }
-
   if(!playerId){
-    pendingMode=requestedMode;
+    pendingMode=selectedMode||mode;
     openNicknameSetup();
     document.getElementById("nicknameStatus").textContent=
       "ゲームを始める前にニックネームを登録してください。";
@@ -768,25 +665,22 @@ function startGame(selectedMode){
   }
 
   clearTimers();
-  if(gainId!==null){
-    clearTimeout(gainId);
-    gainId=null;
-  }
+  if(gainId!==null){clearTimeout(gainId);gainId=null;}
 
   const gain=document.getElementById("scoreGain");
   gain.classList.remove("show","big");
   gain.textContent="";
 
-  mode=requestedMode;
+  mode=selectedMode||mode;
   score=0;
   round=0;
   active=true;
   questionLocked=false;
 
-  questionLimit=isAdvancedMode()?10:5;
+  questionLimit=mode==="advanced"?10:5;
 
   if(version==="latest"){
-    wrongPenalty=isAdvancedMode()?1.5:0.5;
+    wrongPenalty=mode==="normal"?0.5:1.5;
   }else{
     wrongPenalty=0;
   }
@@ -795,10 +689,7 @@ function startGame(selectedMode){
   document.getElementById("game").classList.remove("hidden");
 
   document.getElementById("modeLabel").textContent=
-    is16Mode()
-      ?(isAdvancedMode()?"16上級":"16初級")
-      :(isAdvancedMode()?"上級":"初級");
-
+    mode==="advanced"?"上級":"初級";
   document.getElementById("versionLabel").textContent=VERSION_NAMES[version];
   document.getElementById("score").textContent="0";
 
@@ -822,18 +713,15 @@ function nextQuestion(){
 
   const board=document.getElementById("numbers");
   board.innerHTML="";
-  board.classList.toggle("board-16",is16Mode());
 
-  for(let n=1;n<=numberMax();n++){
+  for(let n=1;n<=10;n++){
     const cell=document.createElement("div");
     cell.className="cell";
-
     const b=document.createElement("button");
     b.className="num";
     b.textContent=n;
     b.setAttribute("aria-label",`数字${n}`);
     b.addEventListener("click",()=>tap(b,cell,n));
-
     cell.appendChild(b);
     board.appendChild(cell);
   }
@@ -854,111 +742,146 @@ function updateTimer(){
 
   if(remaining<=0)endGame();
 }
-function tap(num){
-  if(!active||questionLocked)return;
 
-  const correct=correctNumbers.includes(num);
-  const button=document.querySelector(`.number-btn[data-num="${num}"]`);
+function tap(button,cell,n){
+  if(!active||questionLocked||button.disabled)return;
+  button.disabled=true;
 
-  if(!correct){
-    timeLeft-=wrongPenalty;
-    deadline-=wrongPenalty*1000;
+  if(q.test(n)){
+    button.classList.add("correct");
+    selectedCorrect.add(n);
+    document.getElementById("message").textContent="正解！";
+    vibrate(15);
 
-    if(button){
-      button.classList.add("wrong");
-      setTimeout(()=>button.classList.remove("wrong"),250);
+    if(selectedCorrect.size===currentCorrect.size){
+      questionLocked=true;
+      clearTimers();
+
+      let multiplier=1;
+      const remaining=Math.max(0,(deadline-Date.now())/1000);
+      const hasDivisor=version==="latest"&&(
+        q.predicate?.type==="divisor"||
+        q.first?.type==="divisor"||
+        q.second?.type==="divisor"
+      );
+
+      if(version==="latest"){
+        if(hasDivisor){
+          multiplier=2;
+        }else if(remaining/questionLimit>=0.5){
+          multiplier=1.5;
+        }
+      }
+
+      const earnedPoints=Math.round(currentQuestionPoints*multiplier);
+      score+=earnedPoints;
+
+      document.getElementById("score").textContent=
+        score.toLocaleString("ja-JP");
+      showScoreGain(earnedPoints);
+      vibrate([25,40,45]);
+
+      let bonusText="";
+      if(multiplier===2){
+        bonusText="（約数ボーナス2倍）";
+      }else if(multiplier===1.5){
+        bonusText="（スピードボーナス1.5倍）";
+      }
+
+      document.getElementById("message").textContent=
+        `完全正解！ +${earnedPoints.toLocaleString("ja-JP")}点${bonusText}`;
+
+      if(version==="latest"){
+        questionLimit=Math.max(0.25,questionLimit-0.25);
+      }
+
+      nextId=setTimeout(()=>{
+        if(active)nextQuestion();
+      },350);
     }
+  }else{
+    button.classList.add("wrong");
 
-    vibrate(100);
+    if(wrongPenalty>0){
+      deadline-=wrongPenalty*1000;
 
-    const penalty=document.createElement("div");
-    penalty.className="penalty-popup";
-    penalty.textContent=`-${wrongPenalty}秒`;
-    document.getElementById("gameArea").appendChild(penalty);
-    setTimeout(()=>penalty.remove(),700);
+      const penalty=document.createElement("span");
+      penalty.className="penalty";
+      penalty.textContent=`−${wrongPenalty}秒`;
+      cell.appendChild(penalty);
+      setTimeout(()=>{if(penalty.parentNode)penalty.remove();},900);
 
-    updateTimer();
-    return;
-  }
+      document.getElementById("message").textContent=
+        `誤答！ −${wrongPenalty}秒`;
 
-  if(selectedNumbers.includes(num))return;
-
-  selectedNumbers.push(num);
-
-  if(button){
-    button.classList.add("selected");
-    button.disabled=true;
-  }
-
-  if(selectedNumbers.length===correctNumbers.length){
-    questionLocked=true;
-
-    const elapsed=(Date.now()-questionStartTime)/1000;
-    const points=calculateQuestionPoints(elapsed);
-
-    score+=points;
-    questionsAnswered++;
-
-    document.getElementById("score").textContent=score.toLocaleString();
-    document.getElementById("questionCount").textContent=questionsAnswered;
-
-    const popup=document.createElement("div");
-    popup.className="score-popup";
-    popup.textContent=`+${points.toLocaleString()}`;
-    document.getElementById("gameArea").appendChild(popup);
-    setTimeout(()=>popup.remove(),850);
-
-    clearTimers();
-
-    setTimeout(()=>{
-      if(active)nextQuestion();
-    },250);
+      vibrate([70,35,70]);
+      updateTimer();
+    }else{
+      document.getElementById("message").textContent="誤答！";
+      vibrate(70);
+    }
   }
 }
 
-function updateUnlockBestForRun(){
-  // 16モードではなく、通常の初級・上級の最高得点で解放判定する
-  if(mode!=="normal"&&mode!=="advanced")return;
+function showPersonalBestEffect(){
+  const storageKey=`numberLogicBest_${version}_${mode}`;
+  let previousBest=0;
+  try{previousBest=Number(localStorage.getItem(storageKey)||0);}catch(e){}
+  if(score<=previousBest)return;
 
-  const key=`numberLogicUnlockBest_${mode}`;
-  const previous=Number(localStorage.getItem(key)||0);
+  try{localStorage.setItem(storageKey,String(score));}catch(e){}
+  const layer=document.getElementById("personalBestEffect");
+  layer.replaceChildren();
+  layer.classList.remove("hidden");
 
-  if(score>previous){
-    localStorage.setItem(key,String(score));
+  const plushie=document.createElement("div");
+  plushie.className="plushie-launch";
+  plushie.textContent="🧸";
+  layer.appendChild(plushie);
+
+  const pieces=["#f6d365","#ff6b8a","#6de2ae","#7890ff","#d7a6ff","#ffffff"];
+  for(let i=0;i<65;i++){
+    const piece=document.createElement("span");
+    piece.className="confetti-piece";
+    piece.style.left=(Math.random()*100)+"%";
+    piece.style.background=pieces[Math.floor(Math.random()*pieces.length)];
+    piece.style.animationDelay=(Math.random()*0.9)+"s";
+    piece.style.animationDuration=(1.7+Math.random()*1.5)+"s";
+    layer.appendChild(piece);
   }
-
-  updateModeLocks();
+  document.getElementById("resultNote").textContent=
+    `${VERSION_NAMES[version]}・${mode==="advanced"?"上級":"初級"}に挑戦お疲れさま！ 挑戦した問題数：${round}問　自己ベスト更新！`;
+  setTimeout(()=>{
+    layer.classList.add("hidden");
+    layer.replaceChildren();
+  },4000);
 }
 
 function endGame(){
   if(!active)return;
-
   active=false;
   questionLocked=true;
   clearTimers();
 
-  updateUnlockBestForRun();
+  document.querySelectorAll(".num").forEach(button=>{
+    button.disabled=true;
+  });
 
-  document.getElementById("gameArea").style.display="none";
-  document.getElementById("resultArea").style.display="block";
+  document.getElementById("timer").textContent="0";
+  document.getElementById("timebar").style.width="0%";
+  document.getElementById("game").classList.add("hidden");
+  document.getElementById("result").classList.remove("hidden");
 
-  document.getElementById("finalScore").textContent=score.toLocaleString();
-  document.getElementById("finalQuestions").textContent=questionsAnswered;
+  document.getElementById("resultScore").textContent=
+    `獲得得点：${score.toLocaleString("ja-JP")}点`;
 
-  const resultMode=document.getElementById("resultMode");
-  if(resultMode){
-    resultMode.textContent={
-      normal:"初級",
-      advanced:"上級",
-      normal16:"16初級",
-      advanced16:"16上級"
-    }[mode]||"";
-  }
+  document.getElementById("resultNote").textContent=
+    `${VERSION_NAMES[version]}・${mode==="advanced"?"上級":"初級"}に挑戦お疲れさま！ 挑戦した問題数：${round}問`;
 
-  const nickname=localStorage.getItem("numberLogicNickname");
-  if(nickname){
-    saveBestScore(nickname,mode,score);
-  }
+  document.getElementById("onlineSaveStatus").textContent="";
+  saveBestScore();
+
+  vibrate([80,50,120]);
 }
 
 function backToMenu(){
@@ -966,28 +889,21 @@ function backToMenu(){
   questionLocked=true;
   clearTimers();
 
-  document.getElementById("gameArea").style.display="none";
-  document.getElementById("resultArea").style.display="none";
-  document.getElementById("menuArea").style.display="block";
+  if(gainId!==null){clearTimeout(gainId);gainId=null;}
+  const gain=document.getElementById("scoreGain");
+  gain.classList.remove("show","big");
+  gain.textContent="";
 
-  updateModeLocks();
-}
+  try{
+    if("vibrate" in navigator)navigator.vibrate(0);
+  }catch(e){}
 
-function showPersonalBestEffect(){
-  const effect=document.getElementById("personalBestEffect");
-  if(!effect)return;
-
-  effect.style.display="block";
-  setTimeout(()=>effect.style.display="none",1800);
-}
-
-function init(){
+  hideAllSections();
+  document.getElementById("menu").classList.remove("hidden");
   loadSavedPlayer();
-  updateModeLocks();
 }
 
 initSupabase();
-init();
 </script>
 </body>
 </html>
