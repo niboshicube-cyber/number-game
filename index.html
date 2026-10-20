@@ -840,41 +840,120 @@ function makeAdvancedQuestion(){
     ];
   }
 
-  const first=randomPredicate(predicates);
-  const remaining=predicates.filter(p=>p!==first);
+  // 各条件に当てはまる数字をあらかじめ計算する
+  const candidates=predicates
+    .map(p=>({
+      predicate:p,
+      matches:getCorrect(p.test)
+    }))
+    // 全く当てはまらない条件や、全部に当てはまる条件を除外
+    .filter(item=>
+      item.matches.length>0 &&
+      item.matches.length<numberMax()
+    );
 
-  if(first.type==="mod"){
-    const modIndex=remaining.findIndex(p=>p.type==="mod");
-    if(modIndex!==-1)remaining.splice(modIndex,1);
+  if(candidates.length<2){
+    return makeAdvancedQuestion();
   }
 
-  const second=randomPredicate(remaining);
-  const connector=Math.random()<0.5?"and":"or";
-  const negateFirst=version==="v1"?false:Math.random()<0.25;
-  const negateSecond=version==="v1"?false:Math.random()<0.25;
+  // 条件Aと条件Bの包含関係を判定する
+  function isSubset(a,b){
+    return a.every(n=>b.includes(n));
+  }
 
-  const testFirst=n=>negateFirst?!first.test(n):first.test(n);
-  const testSecond=n=>negateSecond?!second.test(n):second.test(n);
-  const connectorLabel=connector==="and"?"かつ":"または";
+  // ANDで使うには、各条件に当てはまる数字が2個以上必要
+  const andCandidates=candidates.filter(item=>
+    item.matches.length>=2
+  );
 
-  let labelFirst=first.label;
-  let labelSecond=second.label;
-  if(negateFirst)labelFirst+="ではない";
-  if(negateSecond)labelSecond+="ではない";
+  // ORでは、一方の条件が他方を完全に包含する組み合わせを除外
+  function isInterestingOr(a,b){
+    return !isSubset(a.matches,b.matches) &&
+           !isSubset(b.matches,a.matches);
+  }
 
-  const test=n=>{
-    const a=testFirst(n),b=testSecond(n);
-    return connector==="and"?(a&&b):(a||b);
-  };
+  // 条件の組み合わせをランダムに試す
+  for(let attempt=0;attempt<200;attempt++){
+    const connector=Math.random()<0.5?"and":"or";
 
-  return {
-    label:`${labelFirst}<span class="logic">${connectorLabel}</span>${labelSecond}`,
-    correct:getCorrect(test),
-    first,second,connector,
-    negationCount:Number(negateFirst)+Number(negateSecond),
-    test
-  };
-}
+    const pool=connector==="and"
+      ?andCandidates
+      :candidates;
+
+    if(pool.length<2)continue;
+
+    const firstItem=randomItem(pool);
+
+    // 同じ条件を2回使わない
+    const remaining=pool.filter(item=>
+      item.predicate!==firstItem.predicate
+    );
+
+    if(remaining.length===0)continue;
+
+    // ORの場合は、包含関係のない条件だけを候補にする
+    const secondCandidates=connector==="or"
+      ?remaining.filter(item=>
+          isInterestingOr(firstItem,item)
+        )
+      :remaining;
+
+    if(secondCandidates.length===0)continue;
+
+    const secondItem=randomItem(secondCandidates);
+    const first=firstItem.predicate;
+    const second=secondItem.predicate;
+
+    // 同じmod条件同士は避ける
+    if(first.type==="mod" && second.type==="mod")continue;
+
+    const negateFirst=version==="v1"?false:Math.random()<0.25;
+    const negateSecond=version==="v1"?false:Math.random()<0.25;
+
+    const testFirst=n=>negateFirst
+      ?!first.test(n)
+      :first.test(n);
+
+    const testSecond=n=>negateSecond
+      ?!second.test(n)
+      :second.test(n);
+
+    const test=n=>{
+      const a=testFirst(n);
+      const b=testSecond(n);
+
+      return connector==="and"
+        ?a&&b
+        :a||b;
+    };
+
+    const correct=getCorrect(test);
+
+    // 答えが0個、または全部になる問題は出さない
+    if(correct.length===0 || correct.length===numberMax())continue;
+
+    let labelFirst=first.label;
+    let labelSecond=second.label;
+
+    if(negateFirst)labelFirst+="ではない";
+    if(negateSecond)labelSecond+="ではない";
+
+    const connectorLabel=connector==="and"?"かつ":"または";
+
+    return {
+      label:`${labelFirst}<span class="logic">${connectorLabel}</span>${labelSecond}`,
+      correct,
+      first,
+      second,
+      connector,
+      negationCount:Number(negateFirst)+Number(negateSecond),
+      test
+    };
+  }
+
+  // 条件を組み合わせられなかった場合は、単純な条件の組み合わせで再生成
+  return makeAdvancedQuestion();
+} 
 
 function makeQuestion(){
   if(!isAdvancedMode())return makeNormalQuestion();
