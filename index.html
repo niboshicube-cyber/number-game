@@ -685,9 +685,48 @@ function updateModeLocks(){
 
 function makePredicates(){
   const predicates=[];
-  const add=(type,value,label,difficulty,test)=>predicates.push({
-    type,value,label,difficulty,test
-  });
+
+  function add(type,value,label,difficulty,test){
+    predicates.push({type,value,label,difficulty,test});
+  }
+
+  // 初期バージョンのルール
+  add("prime",{}, "素数",1000,n=>isPrime(n));
+  add("even",{}, "偶数",500,n=>n%2===0);
+  add("odd",{}, "奇数",500,n=>n%2===1);
+
+  for(let k=2;k<=10;k++){
+    add("multiple",{k},`${k}の倍数`,1000+k,
+      n=>n%k===0);
+  }
+
+  for(let k=1;k<=10;k++){
+    add("divisor",{k},`${k}の約数`,1000+k,
+      n=>k%n===0);
+  }
+
+  // 発展バージョン以降のルール
+  if(version!=="v1"){
+    for(let b=2;b<=9;b++){
+      for(let a=1;a<b;a++){
+        const test=n=>n%b===a%b;
+
+        // 1〜最大数の中で正解が2個以上あるmod条件だけを候補にする
+        if(getCorrect(test).length>=2){
+          add(
+            "mod",
+            {a,b},
+            `${a}(mod${b})`,
+            2300+(10-b)*10+a,
+            test
+          );
+        }
+      }
+    }
+  }
+
+  return predicates;
+}
 
   const max=numberMax();
   const thresholdItems=max===16?[
@@ -760,26 +799,25 @@ function getCorrect(test){
 }
 
 function randomModPredicate(){
-  const b=2+Math.floor(Math.random()*8);
-  const totalWeight=b*(b-1)/2;
-  let r=Math.random()*totalWeight;
-  let a=1;
+  const validMods=[];
 
-  for(let candidate=1;candidate<b;candidate++){
-    r-=b-candidate;
-    if(r<0){
-      a=candidate;
-      break;
+  // 1〜最大数の中で正解が2個以上あるa(mod b)だけを抽出する
+  for(let b=2;b<=9;b++){
+    for(let a=1;a<b;a++){
+      const test=n=>n%b===a%b;
+      if(getCorrect(test).length>=2){
+        validMods.push({
+          type:"mod",
+          value:{a,b},
+          label:`${a}(mod${b})`,
+          difficulty:2300+(10-b)*10+a,
+          test
+        });
+      }
     }
   }
 
-  return {
-    type:"mod",
-    value:{a,b},
-    label:`${a}(mod${b})`,
-    difficulty:2300+(10-b)*10+a,
-    test:n=>n%b===a%b
-  };
+  return randomItem(validMods);
 }
 
 function randomPredicate(predicates){
