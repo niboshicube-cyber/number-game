@@ -683,6 +683,7 @@ function updateModeLocks(){
   document.getElementById("advanced16Status").textContent=advancedUnlocked?"解放済み！数字1〜16":"上級で50,000点で解放";
 }
 
+
 function makePredicates(){
   const predicates=[];
 
@@ -690,28 +691,62 @@ function makePredicates(){
     predicates.push({type,value,label,difficulty,test});
   }
 
-  // 初期バージョンのルール
-  add("prime",{}, "素数",1000,n=>isPrime(n));
-  add("even",{}, "偶数",500,n=>n%2===0);
-  add("odd",{}, "奇数",500,n=>n%2===1);
+  const max=numberMax();
 
-  for(let k=2;k<=10;k++){
-    add("multiple",{k},`${k}の倍数`,1000+k,
-      n=>n%k===0);
+  const thresholdItems=max===16?[
+    {label:"4以下",value:4,type:"le"},
+    {label:"8以下",value:8,type:"le"},
+    {label:"12以下",value:12,type:"le"},
+    {label:"6以上",value:6,type:"ge"},
+    {label:"10以上",value:10,type:"ge"},
+    {label:"14以上",value:14,type:"ge"}
+  ]:[
+    {label:"3以下",value:3,type:"le"},
+    {label:"5以下",value:5,type:"le"},
+    {label:"7以下",value:7,type:"le"},
+    {label:"4以上",value:4,type:"ge"},
+    {label:"6以上",value:6,type:"ge"},
+    {label:"8以上",value:8,type:"ge"}
+  ];
+
+  for(const item of thresholdItems){
+    const test=item.type==="le"
+      ?n=>n<=item.value
+      :n=>n>=item.value;
+
+    add(item.type,item.value,item.label,500+item.value*10,test);
   }
 
-  for(let k=1;k<=10;k++){
-    add("divisor",{k},`${k}の約数`,1000+k,
-      n=>k%n===0);
+  if(version==="v1"){
+    add("even",null,"偶数",600,n=>n%2===0);
+    add("odd",null,"奇数",600,n=>n%2===1);
   }
 
-  // 発展バージョン以降のルール
+  const maxMultiple=numberMax();
+
+  for(let k=1;k<=maxMultiple;k++){
+    const difficulty=version==="v1"
+      ?700+(6-k)*50
+      :800+(11-k)*50;
+
+    add("multiple",k,`${k}の倍数`,difficulty,n=>n%k===0);
+  }
+
+  add("square",null,"平方数",
+    version==="v1"?1000:1500,
+    n=>Number.isInteger(Math.sqrt(n)));
+
+  add("prime",null,"素数",
+    version==="v1"?1200:2000,
+    n=>isPrime(n));
+
+  // 発展バージョン以降：
+  // 正解が2個以上あるa(mod b)だけを登録する
   if(version!=="v1"){
     for(let b=2;b<=9;b++){
       for(let a=1;a<b;a++){
         const test=n=>n%b===a%b;
 
-        // 1〜最大数の中で正解が2個以上あるmod条件だけを候補にする
         if(getCorrect(test).length>=2){
           add(
             "mod",
@@ -725,59 +760,14 @@ function makePredicates(){
     }
   }
 
-  return predicates;
-}
-
-  const max=numberMax();
-  const thresholdItems=max===16?[
-    {label:"4以下",value:4,type:"le"},{label:"8以下",value:8,type:"le"},
-    {label:"12以下",value:12,type:"le"},{label:"6以上",value:6,type:"ge"},
-    {label:"10以上",value:10,type:"ge"},{label:"14以上",value:14,type:"ge"}
-  ]:[
-    {label:"3以下",value:3,type:"le"},{label:"5以下",value:5,type:"le"},
-    {label:"7以下",value:7,type:"le"},{label:"4以上",value:4,type:"ge"},
-    {label:"6以上",value:6,type:"ge"},{label:"8以上",value:8,type:"ge"}
-  ];
-
-  for(const item of thresholdItems){
-    const test=item.type==="le"?n=>n<=item.value:n=>n>=item.value;
-    add(item.type,item.value,item.label,500+item.value*10,test);
-  }
-
-  if(version==="v1"){
-    add("even",null,"偶数",600,n=>n%2===0);
-    add("odd",null,"奇数",600,n=>n%2===1);
-  }
-
-  const maxMultiple=numberMax();
-  for(let k=1;k<=maxMultiple;k++){
-    const difficulty=version==="v1"
-      ?700+(6-k)*50
-      :800+(11-k)*50;
-    add("multiple",k,`${k}の倍数`,difficulty,n=>n%k===0);
-  }
-
-  add("square",null,"平方数",
-    version==="v1"?1000:1500,
-    n=>Number.isInteger(Math.sqrt(n)));
-
-  add("prime",null,"素数",
-    version==="v1"?1200:2000,
-    n=>isPrime(n));
-
-  if(version!=="v1"){
-    for(let b=2;b<=9;b++){
-      for(let a=1;a<b;a++){
-        add("mod",{a,b},`${a}(mod${b})`,2300+(10-b)*10+a,
-          n=>n%b===a%b);
-      }
-    }
-  }
-
   const maxN=200;
+
   for(let N=1;N<=maxN;N++){
     const divisors=[];
-    for(let n=1;n<=numberMax();n++)if(N%n===0)divisors.push(n);
+
+    for(let n=1;n<=numberMax();n++){
+      if(N%n===0)divisors.push(n);
+    }
 
     if(version!=="v1"&&divisors.length<3)continue;
     if(version==="v1"&&divisors.length<2)continue;
